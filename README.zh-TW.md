@@ -102,6 +102,15 @@ This is an unofficial deployment package. It is not an official distribution of 
 
 部署前，請先確認上方環境需求已可用。
 
+fresh clone 不會包含 `vendor/skill-sources/`。請先從 deployer 資料夾內 bootstrap 本機 mirror：
+
+```cmd
+cd "D:\projects\target-project\silavater-skillset-deployer"
+.\scripts\Update-SkillSources.cmd
+```
+
+接著回到目標專案 root 執行部署：
+
 ```cmd
 cd "D:\projects\target-project"
 
@@ -188,6 +197,8 @@ py -3 .\scripts\Update-SkillSources.py
 
 如果 mirror 有本機變更、origin URL 不符合、目前不在預期的 `main` 分支，或分支歷史已經 diverged，腳本會拒絕更新，避免覆蓋手動修改。Git 指令會使用單次程序的 `safe.directory` 設定，因此能處理 Windows 複製過來後 owner 不一致的 checkout，而不需要修改全域 Git 設定。
 
+如果 deploy 失敗並提示缺少 local skill sources，請先執行這個 updater。`vendor/` 目錄刻意不追蹤在此 repository 裡。
+
 ## 搬移到其他專案
 
 將整個資料夾複製到目標專案：
@@ -200,6 +211,7 @@ Copy-Item -Recurse -Force ".\silavater-skillset-deployer" "D:\projects\target-pr
 
 ```cmd
 cd "D:\projects\target-project\silavater-skillset-deployer"
+.\scripts\Update-SkillSources.cmd
 .\scripts\Deploy-SkillSet-Py.cmd --set env-setup --target "D:\projects\target-project" --dry-run
 .\scripts\Deploy-SkillSet-Py.cmd --set env-setup --target "D:\projects\target-project"
 ```

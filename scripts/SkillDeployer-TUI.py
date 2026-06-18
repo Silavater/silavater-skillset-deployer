@@ -15,6 +15,7 @@ from typing import Sequence
 SCRIPT_DIR = Path(__file__).resolve().parent
 DEPLOYER_ROOT = SCRIPT_DIR.parent
 DEPLOY_SCRIPT = SCRIPT_DIR / "Deploy-SkillSet.py"
+UPDATE_SCRIPT = SCRIPT_DIR / "Update-SkillSources.py"
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -156,6 +157,38 @@ def show_environment_status() -> None:
     pause()
 
 
+def missing_source_labels() -> list[str]:
+    missing: list[str] = []
+    for repo in DEPLOYER.REPOS.values():
+        path = DEPLOYER.repo_path(DEPLOYER.DEFAULT_SOURCE_ROOT, repo)
+        if not path.exists():
+            missing.append(f"{repo.label} ({path})")
+    return missing
+
+
+def ensure_local_sources() -> None:
+    missing = missing_source_labels()
+    if not missing:
+        return
+
+    print_header("Local Mirrors Missing")
+    print("Fresh clones do not include vendor mirrors.")
+    print("The deployer needs local skill sources before it can install skills.\n")
+    for item in missing:
+        print(f"- {item}")
+
+    print("\nThis will run:")
+    print(f"{sys.executable} {UPDATE_SCRIPT}")
+    if not ask_yes_no("Bootstrap/update local mirrors now", default=True):
+        raise TuiError(
+            "Local mirrors are missing. Run scripts\\Update-SkillSources.cmd from the deployer folder, then rerun the TUI."
+        )
+
+    result = subprocess.run([sys.executable, str(UPDATE_SCRIPT)])
+    if result.returncode != 0:
+        raise TuiError(f"Source update failed with exit code {result.returncode}")
+
+
 def is_inside_deployer(path: Path) -> bool:
     try:
         path.resolve().relative_to(DEPLOYER_ROOT.resolve())
@@ -240,6 +273,7 @@ def run_command(command: Sequence[str]) -> None:
 
 
 def skill_set_deploy_mode() -> None:
+    ensure_local_sources()
     while True:
         print_header("SkillSetDeployMode")
         set_options = [(name, f"{name} - {selection.description}") for name, selection in DEPLOYER.PREDEFINED_SETS.items()]
@@ -280,6 +314,7 @@ def short_description(text: str, limit: int = 84) -> str:
 
 
 def single_skill_deploy_mode() -> None:
+    ensure_local_sources()
     skills = collect_skills()
     while True:
         print_header("SingleSkillDeployMode")

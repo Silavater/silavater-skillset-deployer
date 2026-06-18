@@ -102,6 +102,15 @@ Recommended pattern: keep this package inside the target project, but run the de
 
 Before deploying, confirm the environment requirements above are available.
 
+Fresh clones do not include `vendor/skill-sources/`. Bootstrap the local mirrors once from inside the deployer folder:
+
+```cmd
+cd "D:\projects\target-project\silavater-skillset-deployer"
+.\scripts\Update-SkillSources.cmd
+```
+
+Then return to the target project root and deploy:
+
 ```cmd
 cd "D:\projects\target-project"
 
@@ -188,6 +197,8 @@ The updater manages:
 
 It refuses to update a mirror with local changes, the wrong origin URL, a detached/wrong branch, or a diverged history. Git commands use a process-local `safe.directory` setting, so the script can handle copied Windows checkouts without changing global Git config.
 
+If deploy fails with missing local skill sources, run this updater first. The `vendor/` directory is intentionally not tracked in this repository.
+
 ## Move into another project
 
 Copy this whole folder into the target project:
@@ -200,6 +211,7 @@ Then run from inside the copied folder:
 
 ```cmd
 cd "D:\projects\target-project\silavater-skillset-deployer"
+.\scripts\Update-SkillSources.cmd
 .\scripts\Deploy-SkillSet-Py.cmd --set env-setup --target "D:\projects\target-project" --dry-run
 .\scripts\Deploy-SkillSet-Py.cmd --set env-setup --target "D:\projects\target-project"
 ```

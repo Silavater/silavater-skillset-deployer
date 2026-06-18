@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -153,10 +154,24 @@ def is_relative_to(path: Path, parent: Path) -> bool:
 
 
 def require_source_root(source_root: Path) -> None:
+    missing: list[Path] = []
     for repo in REPOS.values():
         path = repo_path(source_root, repo)
         if not path.exists():
-            raise DeployError(f"Missing local skill source: {path}")
+            missing.append(path)
+
+    if missing:
+        lines = ["Missing local skill sources:"]
+        lines.extend(f"  - {path}" for path in missing)
+        lines.extend(
+            (
+                "",
+                "Fresh clones do not include vendor mirrors.",
+                "Bootstrap or update them first:",
+                f"  {DEPLOYER_ROOT / 'scripts' / 'Update-SkillSources.cmd'}",
+            )
+        )
+        raise DeployError("\n".join(lines))
 
 
 def parse_description(content: str) -> str:
@@ -303,10 +318,24 @@ def printable_command(args: Sequence[str]) -> str:
     return " ".join(f'"{part}"' if any(ch.isspace() for ch in part) else part for part in args)
 
 
+def resolve_npx() -> str:
+    candidates = ("npx.cmd", "npx.exe", "npx") if sys.platform == "win32" else ("npx",)
+    for candidate in candidates:
+        path = shutil.which(candidate)
+        if path:
+            return path
+
+    raise DeployError(
+        "Unable to find npx. Install Node.js/npm and confirm `npx --version` works in this terminal."
+    )
+
+
 def run_npx(args: Sequence[str], *, cwd: Path) -> None:
-    result = subprocess.run(list(args), cwd=str(cwd))
+    command = list(args)
+    command[0] = resolve_npx()
+    result = subprocess.run(command, cwd=str(cwd))
     if result.returncode != 0:
-        raise DeployError(f"Command failed with exit code {result.returncode}: {printable_command(args)}")
+        raise DeployError(f"Command failed with exit code {result.returncode}: {printable_command(command)}")
 
 
 def invoke_skill_install(
@@ -333,9 +362,16 @@ def invoke_skill_install(
             args.extend(["--skill", skill])
 
         if dry_run:
-            print(f"DRY RUN in {target_root}: {printable_command(args)}")
+            printable_args = list(args)
+            try:
+                printable_args[0] = resolve_npx()
+            except DeployError:
+                pass
+            print(f"DRY RUN in {target_root}: {printable_command(printable_args)}")
         else:
-            print(f"RUN in {target_root}: {printable_command(args)}")
+            printable_args = list(args)
+            printable_args[0] = resolve_npx()
+            print(f"RUN in {target_root}: {printable_command(printable_args)}")
             run_npx(args, cwd=target_root)
 
 
