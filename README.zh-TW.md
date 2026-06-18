@@ -19,6 +19,8 @@ silavater-skillset-deployer/
 │  ├─ Deploy-SkillSet.ps1
 │  ├─ Deploy-SkillSet-Py.cmd
 │  ├─ Deploy-SkillSet.py
+│  ├─ SkillDeployer-TUI.cmd
+│  ├─ SkillDeployer-TUI.py
 │  ├─ Update-SkillSources.cmd
 │  └─ Update-SkillSources.py
 └─ vendor/
@@ -32,6 +34,8 @@ silavater-skillset-deployer/
 - `vendor/skill-sources/`：上游技能儲存庫的本機鏡像。這是可離線、可快取的真實來源。
 - `scripts/Deploy-SkillSet.py`：建議使用的部署器，支援互動選單、整理好的 skill set、單一 skill、指定 target root 與 dry run。
 - `scripts/Deploy-SkillSet-Py.cmd`：Windows 上呼叫 Python 部署器的啟動器。
+- `scripts/SkillDeployer-TUI.py`：雙模式終端 UI，包含 `SkillSetDeployMode` 與 `SingleSkillDeployMode`。
+- `scripts/SkillDeployer-TUI.cmd`：Windows 上呼叫終端 UI 的啟動器。
 - `scripts/Deploy-SkillSet.cmd`：舊版 PowerShell 部署器的 Windows 啟動器。
 - `scripts/Deploy-SkillSet.ps1`：舊版 PowerShell 實作，透過 `npx skills add` 從本機鏡像部署已整理好的技能集。
 - `scripts/Update-SkillSources.py`：用 Python 更新兩個本機上游 mirror 的腳本。
@@ -101,8 +105,8 @@ This is an unofficial deployment package. It is not an official distribution of 
 ```cmd
 cd "D:\projects\target-project"
 
-# 互動選單
-.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd
+# TUI：SkillSetDeployMode / SingleSkillDeployMode
+.\silavater-skillset-deployer\scripts\SkillDeployer-TUI.cmd
 
 # 只預覽，不做任何變更
 .\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup --dry-run
@@ -142,10 +146,9 @@ Python 部署器會使用自己套件內的 `vendor/skill-sources/` 作為 sourc
 
 | 模式 | 指令 |
 |---|---|
-| 互動選單 | `.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd` |
+| TUI 選單 | `.\silavater-skillset-deployer\scripts\SkillDeployer-TUI.cmd` |
 | 整理好的 skill set | `.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup` |
 | 單一或多個 skill | `.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --skill matt:handoff --skill ecc:terminal-ops` |
-| 整個 mirror | `.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set matt-all` |
 | 明確指定目標 | `.\scripts\Deploy-SkillSet-Py.cmd --set env-setup --target "D:\projects\target-project"` |
 | 只預覽 | `.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup --dry-run` |
 
@@ -211,6 +214,8 @@ cd "D:\projects\target-project\silavater-skillset-deployer"
 target-project/
 └─ silavater-skillset-deployer/
    ├─ docs/SKILL_CATALOG.md
+   ├─ scripts/SkillDeployer-TUI.cmd
+   ├─ scripts/SkillDeployer-TUI.py
    ├─ scripts/Deploy-SkillSet-Py.cmd
    ├─ scripts/Deploy-SkillSet.py
    └─ vendor/skill-sources/...
@@ -220,8 +225,7 @@ target-project/
 
 ```cmd
 cd "D:\projects\target-project"
-.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup --dry-run
-.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup
+.\silavater-skillset-deployer\scripts\SkillDeployer-TUI.cmd
 ```
 
 ## 可用的整理技能集

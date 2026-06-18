@@ -19,6 +19,8 @@ silavater-skillset-deployer/
 │  ├─ Deploy-SkillSet.ps1
 │  ├─ Deploy-SkillSet-Py.cmd
 │  ├─ Deploy-SkillSet.py
+│  ├─ SkillDeployer-TUI.cmd
+│  ├─ SkillDeployer-TUI.py
 │  ├─ Update-SkillSources.cmd
 │  └─ Update-SkillSources.py
 └─ vendor/
@@ -32,6 +34,8 @@ silavater-skillset-deployer/
 - `vendor/skill-sources/` — local mirrors of upstream skill repositories. This is the offline/cacheable source of truth.
 - `scripts/Deploy-SkillSet.py` — recommended deployer. It supports interactive selection, curated sets, individual skills, explicit target roots, and dry runs.
 - `scripts/Deploy-SkillSet-Py.cmd` — Windows launcher for the Python deployer.
+- `scripts/SkillDeployer-TUI.py` — two-mode terminal UI for `SkillSetDeployMode` and `SingleSkillDeployMode`.
+- `scripts/SkillDeployer-TUI.cmd` — Windows launcher for the terminal UI.
 - `scripts/Deploy-SkillSet.cmd` — legacy Windows launcher for the PowerShell implementation.
 - `scripts/Deploy-SkillSet.ps1` — legacy PowerShell implementation that deploys curated skill sets from the local mirrors via `npx skills add`.
 - `scripts/Update-SkillSources.py` — Python updater for the two local mirrored upstream repositories.
@@ -101,8 +105,8 @@ Before deploying, confirm the environment requirements above are available.
 ```cmd
 cd "D:\projects\target-project"
 
-# Interactive selection menu
-.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd
+# TUI with SkillSetDeployMode and SingleSkillDeployMode
+.\silavater-skillset-deployer\scripts\SkillDeployer-TUI.cmd
 
 # Preview only; no changes
 .\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup --dry-run
@@ -142,10 +146,9 @@ Deployment modes:
 
 | Mode | Command |
 |---|---|
-| Interactive menu | `.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd` |
+| TUI menu | `.\silavater-skillset-deployer\scripts\SkillDeployer-TUI.cmd` |
 | Curated set | `.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup` |
 | Individual skills | `.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --skill matt:handoff --skill ecc:terminal-ops` |
-| Full mirror | `.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set matt-all` |
 | Explicit target | `.\scripts\Deploy-SkillSet-Py.cmd --set env-setup --target "D:\projects\target-project"` |
 | Preview only | `.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup --dry-run` |
 
@@ -211,6 +214,8 @@ For a target project root, use this structure:
 target-project/
 └─ silavater-skillset-deployer/
    ├─ docs/SKILL_CATALOG.md
+   ├─ scripts/SkillDeployer-TUI.cmd
+   ├─ scripts/SkillDeployer-TUI.py
    ├─ scripts/Deploy-SkillSet-Py.cmd
    ├─ scripts/Deploy-SkillSet.py
    └─ vendor/skill-sources/...
@@ -220,8 +225,7 @@ Then:
 
 ```cmd
 cd "D:\projects\target-project"
-.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup --dry-run
-.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup
+.\silavater-skillset-deployer\scripts\SkillDeployer-TUI.cmd
 ```
 
 ## Available curated sets
