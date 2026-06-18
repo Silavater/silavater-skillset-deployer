@@ -5,6 +5,7 @@
 param(
     [ValidateSet(
         'core-dev',
+        'lean-dev',
         'env-setup',
         'research',
         'security',
@@ -14,6 +15,7 @@ param(
         'agent-ops',
         'matt-all',
         'ecc-all',
+        'pony-all',
         'all'
     )]
     [string]$Set = 'core-dev',
@@ -36,6 +38,7 @@ $ErrorActionPreference = 'Stop'
 $WorkspaceRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 $MattSource = Join-Path $WorkspaceRoot 'vendor\skill-sources\mattpocock-skills'
 $EccSource = Join-Path $WorkspaceRoot 'vendor\skill-sources\affaan-m-ecc'
+$PonySource = Join-Path $WorkspaceRoot 'vendor\skill-sources\ponytail'
 $CatalogPath = Join-Path $WorkspaceRoot 'docs\SKILL_CATALOG.md'
 
 function Assert-SourceExists {
@@ -79,6 +82,10 @@ function Get-SkillInfo {
                 return $relative -match 'vendor\\skill-sources\\affaan-m-ecc\\skills\\[^\\]+\\SKILL\.md$'
             }
 
+            if ($RepoName -eq 'DietrichGebert/ponytail') {
+                return $relative -match 'vendor\\skill-sources\\ponytail\\skills\\[^\\]+\\SKILL\.md$'
+            }
+
             return $_.FullName.StartsWith($rootFull, [System.StringComparison]::OrdinalIgnoreCase)
         }
 
@@ -88,8 +95,18 @@ function Get-SkillInfo {
         $relative = Get-RelativePathFromWorkspace -Path $file.FullName
 
         $description = $null
+        if ($content -match '(?s)^\s*---\s*(.*?)\s*---') {
+            $frontmatter = $Matches[1]
+            if ($frontmatter -match '(?s)\bdescription:\s*(?:[>\|-]+\s*)?(.*?)(?:\s+\b(?:license|author|keywords|skills|commands):\s*|$)') {
+                $description = (($Matches[1] -replace '\s+', ' ').Trim() -replace '^["'']|["'']$', '')
+            }
+        }
+
         if ($content -match '(?m)^description:\s*["'']?(.*?)["'']?\s*$') {
-            $description = $Matches[1].Trim()
+            $candidate = ($Matches[1].Trim() -replace '^["'']|["'']$', '')
+            if ($candidate -and $candidate -notin @('>', '>-', '|', '|-')) {
+                $description = $candidate
+            }
         }
 
         if (-not $description) {
@@ -126,41 +143,55 @@ function Get-PredefinedSets {
             Description = 'Daily development: code understanding, debugging, TDD, handoff, and verification.'
             Matt = @('diagnosing-bugs', 'tdd', 'codebase-design', 'handoff', 'writing-great-skills')
             Ecc  = @('terminal-ops', 'verification-loop', 'git-workflow', 'search-first', 'tdd-workflow')
+            Pony = @('ponytail-review')
+        }
+        'lean-dev' = @{
+            Description = 'Anti-overengineering: YAGNI, minimal implementations, deletion-first reviews, and Ponytail debt tracking.'
+            Matt = @()
+            Ecc  = @()
+            Pony = @('ponytail', 'ponytail-review', 'ponytail-audit', 'ponytail-debt', 'ponytail-help')
         }
         'env-setup' = @{
             Description = 'Environment setup: CLI/package/workspace audit, docs lookup, and safety guardrails.'
             Matt = @('diagnosing-bugs', 'codebase-design', 'handoff')
             Ecc  = @('terminal-ops', 'workspace-surface-audit', 'research-ops', 'search-first', 'safety-guard', 'security-scan')
+            Pony = @()
         }
         'research' = @{
             Description = 'Research: search first, collect sources, inspect docs, and produce decision summaries.'
             Matt = @('codebase-design', 'grill-me', 'handoff')
             Ecc  = @('research-ops', 'search-first', 'documentation-lookup', 'market-research', 'skill-scout')
+            Pony = @()
         }
         'security' = @{
             Description = 'Security review: secrets, MCPs, config files, hooks, input boundaries, and dangerous operations.'
             Matt = @('diagnosing-bugs', 'git-guardrails-claude-code')
             Ecc  = @('security-review', 'security-scan', 'safety-guard', 'gateguard', 'llm-trading-agent-security')
+            Pony = @()
         }
         'frontend' = @{
             Description = 'Frontend/UI: React/Next, performance, accessibility, motion, and polish.'
             Matt = @('prototype', 'tdd', 'codebase-design')
             Ecc  = @('frontend-patterns', 'frontend-a11y', 'react-patterns', 'react-performance', 'react-testing', 'motion-foundations', 'motion-patterns', 'make-interfaces-feel-better', 'vite-patterns')
+            Pony = @()
         }
         'backend-ts' = @{
             Description = 'TypeScript backend: API, database, ORM, cache, Node/Next/Nest patterns.'
             Matt = @('diagnosing-bugs', 'tdd', 'codebase-design')
             Ecc  = @('api-design', 'backend-patterns', 'nestjs-patterns', 'prisma-patterns', 'postgres-patterns', 'redis-patterns', 'mcp-server-patterns', 'nodejs-keccak256')
+            Pony = @()
         }
         'python' = @{
             Description = 'Python: idioms, pytest, Django, data, and ML workflows.'
             Matt = @('diagnosing-bugs', 'tdd', 'codebase-design')
             Ecc  = @('python-patterns', 'python-testing', 'django-patterns', 'django-tdd', 'django-verification', 'mle-workflow', 'pytorch-patterns')
+            Pony = @()
         }
         'agent-ops' = @{
             Description = 'Agent operations: skill scouting, stocktake, quality, context, parallelism, and local knowledge management.'
             Matt = @('writing-great-skills', 'handoff', 'grill-with-docs')
             Ecc  = @('skill-scout', 'skill-stocktake', 'skill-comply', 'knowledge-ops', 'parallel-execution-optimizer', 'strategic-compact', 'iterative-retrieval', 'workspace-surface-audit')
+            Pony = @()
         }
     }
 }
@@ -175,7 +206,8 @@ function Write-Catalog {
     $bt = [char]96
     $mattSkills = @(Get-SkillInfo -RepoName 'mattpocock/skills' -Root $MattSource | Sort-Object Name)
     $eccSkills = @(Get-SkillInfo -RepoName 'affaan-m/ECC' -Root $EccSource | Sort-Object Name)
-    $allSkills = @($mattSkills + $eccSkills)
+    $ponySkills = @(Get-SkillInfo -RepoName 'DietrichGebert/ponytail' -Root $PonySource | Sort-Object Name)
+    $allSkills = @($mattSkills + $eccSkills + $ponySkills)
 
     $lines = [System.Collections.Generic.List[string]]::new()
     $lines.Add('# Local Skill Catalog')
@@ -188,6 +220,7 @@ function Write-Catalog {
     $lines.Add('|---|---:|---:|')
     $lines.Add("| mattpocock/skills | ${bt}vendor/skill-sources/mattpocock-skills${bt} | $($mattSkills.Count) |")
     $lines.Add("| affaan-m/ECC | ${bt}vendor/skill-sources/affaan-m-ecc${bt} | $($eccSkills.Count) |")
+    $lines.Add("| DietrichGebert/ponytail | ${bt}vendor/skill-sources/ponytail${bt} | $($ponySkills.Count) |")
     $lines.Add("| Total | local mirror | $($allSkills.Count) |")
     $lines.Add('')
     $lines.Add('## Credits and Licenses')
@@ -198,6 +231,7 @@ function Write-Catalog {
     $lines.Add('|---|---|---|')
     $lines.Add("| [mattpocock/skills](https://github.com/mattpocock/skills) | ${bt}vendor/skill-sources/mattpocock-skills${bt} | MIT |")
     $lines.Add("| [affaan-m/ECC](https://github.com/affaan-m/ECC) | ${bt}vendor/skill-sources/affaan-m-ecc${bt} | MIT |")
+    $lines.Add("| [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | ${bt}vendor/skill-sources/ponytail${bt} | MIT |")
     $lines.Add('')
     $lines.Add('The mirrored skill sources under `vendor/skill-sources/` are derived from those upstream projects. This repository is an independent and unofficial packaging/deployment helper and is not affiliated with, endorsed by, or maintained by the upstream authors unless explicitly stated.')
     $lines.Add('')
@@ -205,7 +239,7 @@ function Write-Catalog {
     $lines.Add('')
     $lines.Add('## Recommended Skill Sets')
     $lines.Add('')
-    $lines.Add('> Recommendation: deploy only one or two sets at a time. Do not active-install all ECC skills unless you explicitly want a noisy agent surface. Full sources are already mirrored under `vendor/skill-sources/` and can be deployed on demand.')
+    $lines.Add('> Recommendation: deploy only one or two sets at a time. Do not active-install all ECC skills or always-on style skills unless you explicitly want a larger agent surface. Full sources are already mirrored under `vendor/skill-sources/` and can be deployed on demand.')
     $lines.Add('')
 
     foreach ($key in $sets.Keys) {
@@ -224,8 +258,15 @@ function Write-Catalog {
         $lines.Add('')
         $lines.Add('| Repo | Skills |')
         $lines.Add('|---|---|')
-        $lines.Add("| mattpocock/skills | $($set.Matt -join ', ') |")
-        $lines.Add("| affaan-m/ECC | $($set.Ecc -join ', ') |")
+        if (@($set.Matt).Count -gt 0) {
+            $lines.Add("| mattpocock/skills | $($set.Matt -join ', ') |")
+        }
+        if (@($set.Ecc).Count -gt 0) {
+            $lines.Add("| affaan-m/ECC | $($set.Ecc -join ', ') |")
+        }
+        if (@($set.Pony).Count -gt 0) {
+            $lines.Add("| DietrichGebert/ponytail | $($set.Pony -join ', ') |")
+        }
         $lines.Add('')
     }
 
@@ -250,7 +291,7 @@ function Write-Catalog {
     $lines.Add('.\scripts\Deploy-SkillSet.cmd -UpdateCatalog -DryRun')
     $lines.Add('')
     $lines.Add('# Deploy individual skills')
-    $lines.Add('.\scripts\Deploy-SkillSet-Py.cmd --skill matt:handoff --skill ecc:terminal-ops')
+    $lines.Add('.\scripts\Deploy-SkillSet-Py.cmd --skill matt:handoff --skill ecc:terminal-ops --skill pony:ponytail-review')
     $lines.Add('```')
     $lines.Add('')
     $lines.Add('## CC Switch Note')
@@ -282,18 +323,23 @@ function Get-SkillsForSet {
     }
 
     if ($SetName -eq 'matt-all') {
-        return @{ Description = 'All Matt Pocock skills'; Matt = @(Get-SkillInfo -RepoName 'mattpocock/skills' -Root $MattSource | Sort-Object Name | ForEach-Object Name); Ecc = @() }
+        return @{ Description = 'All Matt Pocock skills'; Matt = @(Get-SkillInfo -RepoName 'mattpocock/skills' -Root $MattSource | Sort-Object Name | ForEach-Object Name); Ecc = @(); Pony = @() }
     }
 
     if ($SetName -eq 'ecc-all') {
-        return @{ Description = 'All ECC skills'; Matt = @(); Ecc = @(Get-SkillInfo -RepoName 'affaan-m/ECC' -Root $EccSource | Sort-Object Name | ForEach-Object Name) }
+        return @{ Description = 'All ECC skills'; Matt = @(); Ecc = @(Get-SkillInfo -RepoName 'affaan-m/ECC' -Root $EccSource | Sort-Object Name | ForEach-Object Name); Pony = @() }
+    }
+
+    if ($SetName -eq 'pony-all') {
+        return @{ Description = 'All Ponytail skills'; Matt = @(); Ecc = @(); Pony = @(Get-SkillInfo -RepoName 'DietrichGebert/ponytail' -Root $PonySource | Sort-Object Name | ForEach-Object Name) }
     }
 
     if ($SetName -eq 'all') {
         return @{
-            Description = 'All mirrored skills from both sources'
+            Description = 'All mirrored skills from all sources'
             Matt = @(Get-SkillInfo -RepoName 'mattpocock/skills' -Root $MattSource | Sort-Object Name | ForEach-Object Name)
             Ecc = @(Get-SkillInfo -RepoName 'affaan-m/ECC' -Root $EccSource | Sort-Object Name | ForEach-Object Name)
+            Pony = @(Get-SkillInfo -RepoName 'DietrichGebert/ponytail' -Root $PonySource | Sort-Object Name | ForEach-Object Name)
         }
     }
 
@@ -344,6 +390,7 @@ function Invoke-SkillInstall {
 
 Assert-SourceExists -Path $MattSource
 Assert-SourceExists -Path $EccSource
+Assert-SourceExists -Path $PonySource
 
 if ($UpdateCatalog) {
     Write-Catalog
@@ -353,3 +400,4 @@ $selected = Get-SkillsForSet -SetName $Set
 Write-Host "Selected set: $Set - $($selected.Description)"
 Invoke-SkillInstall -Source $MattSource -Skills @($selected.Matt)
 Invoke-SkillInstall -Source $EccSource -Skills @($selected.Ecc)
+Invoke-SkillInstall -Source $PonySource -Skills @($selected.Pony)

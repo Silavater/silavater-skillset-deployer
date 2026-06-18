@@ -22,6 +22,7 @@ class RepoSpec:
     path: Path
     url: str
     branch: str = "main"
+    sparse_paths: tuple[str, ...] = ()
 
 
 REPOS: tuple[RepoSpec, ...] = (
@@ -36,6 +37,13 @@ REPOS: tuple[RepoSpec, ...] = (
         label="affaan-m/ECC",
         path=SKILL_SOURCES_ROOT / "affaan-m-ecc",
         url="https://github.com/affaan-m/ECC.git",
+    ),
+    RepoSpec(
+        key="ponytail",
+        label="DietrichGebert/ponytail",
+        path=SKILL_SOURCES_ROOT / "ponytail",
+        url="https://github.com/DietrichGebert/ponytail.git",
+        sparse_paths=("/skills/", "/LICENSE"),
     ),
 )
 
@@ -86,6 +94,10 @@ def printable_command(args: Sequence[str]) -> str:
     return " ".join(f'"{part}"' if any(ch.isspace() for ch in part) else part for part in args)
 
 
+def sparse_checkout_command(repo: RepoSpec) -> list[str]:
+    return ["git", "-C", str(repo.path), "sparse-checkout", "set", "--no-cone", *repo.sparse_paths]
+
+
 def select_repos(selected: str) -> Iterable[RepoSpec]:
     if selected == "all":
         return REPOS
@@ -108,16 +120,24 @@ def clone_repo(repo: RepoSpec, *, dry_run: bool) -> None:
         "--branch",
         repo.branch,
         "--single-branch",
-        repo.url,
-        str(repo.path),
     ]
+    if repo.sparse_paths:
+        command.extend(["--filter=blob:none", "--sparse"])
+    command.extend([repo.url, str(repo.path)])
+
+    sparse_command = sparse_checkout_command(repo)
     if dry_run:
         print(f"DRY RUN: {printable_command(command)}")
+        if repo.sparse_paths:
+            print(f"DRY RUN: {printable_command(sparse_command)}")
         return
 
     repo.path.parent.mkdir(parents=True, exist_ok=True)
     print(f"Cloning {repo.label} into {repo.path}")
     run(command, check=True, capture=False)
+    if repo.sparse_paths:
+        print(f"Restricting {repo.label} checkout to: {', '.join(repo.sparse_paths)}")
+        run(sparse_command, check=True, capture=False)
 
 
 def require_clean_worktree(repo: RepoSpec) -> None:
@@ -147,6 +167,19 @@ def verify_branch(repo: RepoSpec) -> None:
         )
 
 
+def ensure_sparse_checkout(repo: RepoSpec, *, dry_run: bool) -> None:
+    if not repo.sparse_paths:
+        return
+
+    command = sparse_checkout_command(repo)
+    if dry_run:
+        print(f"DRY RUN: {printable_command(command)}")
+        return
+
+    print(f"Ensuring sparse checkout for {repo.label}: {', '.join(repo.sparse_paths)}")
+    git(repo, ["sparse-checkout", "set", "--no-cone", *repo.sparse_paths])
+
+
 def rev_parse(repo: RepoSpec, ref: str) -> str:
     return git(repo, ["rev-parse", "--short", ref]).stdout.strip()
 
@@ -170,6 +203,7 @@ def update_repo(repo: RepoSpec, *, dry_run: bool) -> None:
     require_clean_worktree(repo)
     verify_remote(repo)
     verify_branch(repo)
+    ensure_sparse_checkout(repo, dry_run=dry_run)
 
     before = rev_parse(repo, "HEAD")
     remote_ref = f"origin/{repo.branch}"

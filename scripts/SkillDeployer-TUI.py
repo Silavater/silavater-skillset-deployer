@@ -343,7 +343,7 @@ def skill_set_deploy_mode() -> None:
 def collect_skills() -> list[SkillChoice]:
     skills_by_repo = DEPLOYER.all_skills(DEPLOYER.DEFAULT_SOURCE_ROOT)
     choices: list[SkillChoice] = []
-    for repo_key in ("matt", "ecc"):
+    for repo_key in DEPLOYER.REPOS:
         for skill in skills_by_repo[repo_key]:
             choices.append(SkillChoice(repo=repo_key, name=skill.name, description=skill.description))
     return sorted(choices, key=lambda item: (item.repo, item.name.lower()))
@@ -361,9 +361,10 @@ def single_skill_deploy_mode() -> None:
     skills = collect_skills()
     while True:
         print_header("SingleSkillDeployMode")
+        repo_options = (("all", "all"),) + tuple((key, repo.label) for key, repo in DEPLOYER.REPOS.items())
         repo_filter = ask_choice(
             "Choose skill source",
-            (("all", "all"), ("matt", "mattpocock/skills"), ("ecc", "affaan-m/ECC")),
+            repo_options,
         )
         if repo_filter == "back":
             return

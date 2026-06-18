@@ -44,6 +44,7 @@ class DeploySelection:
     description: str
     matt: tuple[str, ...] = ()
     ecc: tuple[str, ...] = ()
+    pony: tuple[str, ...] = ()
 
 
 REPOS: dict[str, RepoSpec] = {
@@ -62,6 +63,12 @@ REPOS: dict[str, RepoSpec] = {
         path_name="affaan-m-ecc",
         skill_pattern=re.compile(r"^skills[\\/][^\\/]+[\\/]SKILL\.md$", re.IGNORECASE),
     ),
+    "pony": RepoSpec(
+        key="pony",
+        label="DietrichGebert/ponytail",
+        path_name="ponytail",
+        skill_pattern=re.compile(r"^skills[\\/][^\\/]+[\\/]SKILL\.md$", re.IGNORECASE),
+    ),
 }
 
 
@@ -70,6 +77,11 @@ PREDEFINED_SETS: dict[str, DeploySelection] = {
         description="Daily development: code understanding, debugging, TDD, handoff, and verification.",
         matt=("diagnosing-bugs", "tdd", "codebase-design", "handoff", "writing-great-skills"),
         ecc=("terminal-ops", "verification-loop", "git-workflow", "search-first", "tdd-workflow"),
+        pony=("ponytail-review",),
+    ),
+    "lean-dev": DeploySelection(
+        description="Anti-overengineering: YAGNI, minimal implementations, deletion-first reviews, and Ponytail debt tracking.",
+        pony=("ponytail", "ponytail-review", "ponytail-audit", "ponytail-debt", "ponytail-help"),
     ),
     "env-setup": DeploySelection(
         description="Environment setup: CLI/package/workspace audit, docs lookup, and safety guardrails.",
@@ -178,10 +190,58 @@ def require_source_root(source_root: Path) -> None:
         raise DeployError("\n".join(lines))
 
 
+def normalize_description(text: str) -> str:
+    return re.sub(r"\s+", " ", text).strip().strip("\"'")
+
+
+def parse_frontmatter_description(content: str) -> str | None:
+    match = re.match(r"\s*---\s*(.*?)\s*---", content, re.DOTALL)
+    if not match:
+        return None
+
+    frontmatter = match.group(1)
+    lines = frontmatter.splitlines()
+    for index, line in enumerate(lines):
+        trimmed = line.strip()
+        if not trimmed.startswith("description:"):
+            continue
+
+        raw = trimmed[len("description:") :].strip()
+        if raw in ("", ">", ">-", "|", "|-"):
+            block: list[str] = []
+            for next_line in lines[index + 1 :]:
+                next_trimmed = next_line.strip()
+                if re.match(r"^[A-Za-z_-]+:\s*", next_trimmed):
+                    break
+                if next_trimmed:
+                    block.append(next_trimmed)
+            description = normalize_description(" ".join(block))
+            return description or None
+
+        description = normalize_description(raw)
+        return description or None
+
+    compact = re.search(r"\bdescription:\s*(?:[>|-]+\s*)?(.*)", frontmatter, re.DOTALL)
+    if compact:
+        value = re.split(
+            r"\s+\b(?:license|author|keywords|skills|commands):\s*",
+            compact.group(1),
+            maxsplit=1,
+        )[0]
+        description = normalize_description(value)
+        return description or None
+
+    return None
+
+
 def parse_description(content: str) -> str:
+    frontmatter_description = parse_frontmatter_description(content)
+    if frontmatter_description:
+        return frontmatter_description
+
     match = re.search(r"(?m)^description:\s*[\"']?(.*?)[\"']?\s*$", content)
     if match:
-        return match.group(1).strip()
+        return normalize_description(match.group(1))
 
     for line in content.splitlines():
         trimmed = line.strip()
@@ -189,7 +249,7 @@ def parse_description(content: str) -> str:
             continue
         if re.match(r"^[A-Za-z_-]+:\s*", trimmed):
             continue
-        return trimmed
+        return normalize_description(trimmed)
 
     return "No short description found in SKILL.md; inspect it before deploying."
 
@@ -231,18 +291,21 @@ def selection_from_set(set_name: str, source_root: Path) -> DeploySelection:
         return DeploySelection("All Matt Pocock skills", matt=tuple(skill.name for skill in skills["matt"]))
     if set_name == "ecc-all":
         return DeploySelection("All ECC skills", ecc=tuple(skill.name for skill in skills["ecc"]))
+    if set_name == "pony-all":
+        return DeploySelection("All Ponytail skills", pony=tuple(skill.name for skill in skills["pony"]))
     if set_name == "all":
         return DeploySelection(
-            "All mirrored skills from both sources",
+            "All mirrored skills from all sources",
             matt=tuple(skill.name for skill in skills["matt"]),
             ecc=tuple(skill.name for skill in skills["ecc"]),
+            pony=tuple(skill.name for skill in skills["pony"]),
         )
 
     raise DeployError(f"Unknown set: {set_name}")
 
 
 def selection_from_skills(skill_specs: Sequence[str], default_repo: str | None) -> DeploySelection:
-    selected: dict[str, list[str]] = {"matt": [], "ecc": []}
+    selected: dict[str, list[str]] = {key: [] for key in REPOS}
 
     for spec in skill_specs:
         if ":" in spec:
@@ -252,10 +315,10 @@ def selection_from_skills(skill_specs: Sequence[str], default_repo: str | None) 
             repo_key = normalize_repo_key(default_repo)
             skill_name = spec
         else:
-            raise DeployError(f"Skill '{spec}' needs a repo prefix such as matt:{spec} or ecc:{spec}.")
+            raise DeployError(f"Skill '{spec}' needs a repo prefix such as matt:{spec}, ecc:{spec}, or pony:{spec}.")
 
         if repo_key == "both":
-            raise DeployError("Use a concrete repo for single skills: matt or ecc.")
+            raise DeployError("Use a concrete repo for single skills: matt, ecc, or pony.")
         if not skill_name:
             raise DeployError(f"Invalid skill spec: {spec}")
         selected[repo_key].append(skill_name)
@@ -264,6 +327,7 @@ def selection_from_skills(skill_specs: Sequence[str], default_repo: str | None) 
         "Selected individual skills",
         matt=tuple(selected["matt"]),
         ecc=tuple(selected["ecc"]),
+        pony=tuple(selected["pony"]),
     )
 
 
@@ -273,7 +337,9 @@ def selection_from_repo_all(repo_key: str, source_root: Path) -> DeploySelection
         return selection_from_set("all", source_root)
     if normalized == "matt":
         return selection_from_set("matt-all", source_root)
-    return selection_from_set("ecc-all", source_root)
+    if normalized == "ecc":
+        return selection_from_set("ecc-all", source_root)
+    return selection_from_set("pony-all", source_root)
 
 
 def normalize_repo_key(repo_key: str) -> str:
@@ -287,10 +353,16 @@ def normalize_repo_key(repo_key: str) -> str:
         "affaan": "ecc",
         "affaan-m-ecc": "ecc",
         "affaan-m/ecc": "ecc",
+        "p": "pony",
+        "ponytail": "pony",
+        "dietrich": "pony",
+        "dietrichgebert": "pony",
+        "dietrichgebert-ponytail": "pony",
+        "dietrichgebert/ponytail": "pony",
         "all": "both",
     }
     value = aliases.get(value, value)
-    if value not in ("matt", "ecc", "both"):
+    if value not in ("matt", "ecc", "pony", "both"):
         raise DeployError(f"Unknown repo: {repo_key}")
     return value
 
@@ -302,12 +374,10 @@ def validate_selection(selection: DeploySelection, source_root: Path) -> None:
     }
 
     missing: list[str] = []
-    for skill in selection.matt:
-        if skill not in available["matt"]:
-            missing.append(f"matt:{skill}")
-    for skill in selection.ecc:
-        if skill not in available["ecc"]:
-            missing.append(f"ecc:{skill}")
+    for key in REPOS:
+        for skill in getattr(selection, key):
+            if skill not in available[key]:
+                missing.append(f"{key}:{skill}")
 
     if missing:
         raise DeployError("Unknown skills in local mirrors: " + ", ".join(missing))
@@ -388,7 +458,7 @@ def deploy_selection(
     agent: str,
     dry_run: bool,
 ) -> None:
-    if not selection.matt and not selection.ecc:
+    if not any(getattr(selection, key) for key in REPOS):
         raise DeployError("No skills selected.")
 
     validate_selection(selection, source_root)
@@ -398,8 +468,8 @@ def deploy_selection(
     print(f"Scope: {scope}")
     print(f"Agent: {agent or '(none)'}")
 
-    invoke_skill_install(source_root, target_root, "matt", selection.matt, scope=scope, agent=agent, dry_run=dry_run)
-    invoke_skill_install(source_root, target_root, "ecc", selection.ecc, scope=scope, agent=agent, dry_run=dry_run)
+    for key in REPOS:
+        invoke_skill_install(source_root, target_root, key, getattr(selection, key), scope=scope, agent=agent, dry_run=dry_run)
 
 
 def prompt_choice(title: str, options: Sequence[tuple[str, str]]) -> str:
@@ -435,15 +505,11 @@ def choose_skills_interactively(source_root: Path) -> DeploySelection:
     skills_by_repo = all_skills(source_root)
     repo_choice = prompt_choice(
         "Choose skill source",
-        (
-            ("matt", "mattpocock/skills"),
-            ("ecc", "affaan-m/ECC"),
-            ("both", "Both"),
-        ),
+        tuple((key, repo.label) for key, repo in REPOS.items()) + (("both", "All sources"),),
     )
 
     pool = []
-    for key in ("matt", "ecc"):
+    for key in REPOS:
         if repo_choice in (key, "both"):
             pool.extend(skills_by_repo[key])
 
@@ -475,7 +541,7 @@ def choose_skills_interactively(source_root: Path) -> DeploySelection:
             break
         print("Invalid selection.")
 
-    selected = {"matt": [], "ecc": []}
+    selected = {key: [] for key in REPOS}
     for index in indexes:
         skill = visible[index - 1]
         selected[skill.repo.key].append(skill.name)
@@ -484,6 +550,7 @@ def choose_skills_interactively(source_root: Path) -> DeploySelection:
         "Selected individual skills",
         matt=tuple(selected["matt"]),
         ecc=tuple(selected["ecc"]),
+        pony=tuple(selected["pony"]),
     )
 
 
@@ -493,7 +560,8 @@ def choose_set_interactively(source_root: Path) -> DeploySelection:
         (
             ("matt-all", "matt-all - All primary Matt Pocock skills"),
             ("ecc-all", "ecc-all - All primary ECC skills"),
-            ("all", "all - All primary skills from both mirrors"),
+            ("pony-all", "pony-all - All Ponytail skills"),
+            ("all", "all - All primary skills from all mirrors"),
         )
     )
     set_name = prompt_choice("Choose a curated set", options)
@@ -503,11 +571,8 @@ def choose_set_interactively(source_root: Path) -> DeploySelection:
 def choose_repo_all_interactively(source_root: Path) -> DeploySelection:
     repo_choice = prompt_choice(
         "Choose full source to deploy",
-        (
-            ("matt", "All Matt Pocock skills"),
-            ("ecc", "All ECC skills"),
-            ("both", "All skills from both mirrors"),
-        ),
+        tuple((key, f"All {repo.label} skills") for key, repo in REPOS.items())
+        + (("both", "All skills from all mirrors"),),
     )
     return selection_from_repo_all(repo_choice, source_root)
 
@@ -518,7 +583,7 @@ def interactive_selection(source_root: Path) -> DeploySelection:
         (
             ("set", "Curated skill set"),
             ("skill", "One or more individual skills"),
-            ("all", "All skills from one source or both"),
+            ("all", "All skills from one source or all sources"),
         ),
     )
     if method == "set":
@@ -533,9 +598,9 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         description="Deploy skills from this local deployer's mirrored skill sources."
     )
     parser.add_argument("--method", choices=("set", "skill", "all"), help="Deployment mode. Omit for interactive mode.")
-    parser.add_argument("--set", choices=tuple(PREDEFINED_SETS.keys()) + ("matt-all", "ecc-all", "all"), help="Curated set to deploy.")
-    parser.add_argument("--skill", action="append", default=[], help="Skill to deploy, such as matt:handoff or ecc:terminal-ops. Repeatable.")
-    parser.add_argument("--repo", choices=("matt", "ecc", "both"), help="Repo for --skill without a prefix, or source for --method all.")
+    parser.add_argument("--set", choices=tuple(PREDEFINED_SETS.keys()) + ("matt-all", "ecc-all", "pony-all", "all"), help="Curated set to deploy.")
+    parser.add_argument("--skill", action="append", default=[], help="Skill to deploy, such as matt:handoff, ecc:terminal-ops, or pony:ponytail-review. Repeatable.")
+    parser.add_argument("--repo", choices=("matt", "ecc", "pony", "both"), help="Repo for --skill without a prefix, or source for --method all.")
     parser.add_argument("--target", type=Path, default=Path.cwd(), help="Project root to install into. Defaults to the current directory.")
     parser.add_argument("--source-root", type=Path, default=DEFAULT_SOURCE_ROOT, help="Local skill-sources directory. Defaults to this deployer package.")
     parser.add_argument("--scope", choices=("project", "global"), default="project", help="Install scope for npx skills.")
@@ -556,11 +621,12 @@ def print_sets() -> None:
         print(f"{key}: {selection.description}")
     print("matt-all: All primary Matt Pocock skills")
     print("ecc-all: All primary ECC skills")
-    print("all: All primary skills from both mirrors")
+    print("pony-all: All Ponytail skills")
+    print("all: All primary skills from all mirrors")
 
 
 def print_skills(source_root: Path) -> None:
-    for key in ("matt", "ecc"):
+    for key in REPOS:
         print(f"\n{REPOS[key].label}")
         for skill in discover_skills(source_root, REPOS[key]):
             print(f"  {skill.repo.key}:{skill.name} - {skill.description}")
@@ -583,7 +649,7 @@ def build_selection(args: argparse.Namespace, source_root: Path) -> DeploySelect
 
 
 def should_confirm_all(selection: DeploySelection) -> bool:
-    return len(selection.matt) + len(selection.ecc) > 30
+    return sum(len(getattr(selection, key)) for key in REPOS) > 30
 
 
 def main(argv: Sequence[str]) -> int:
@@ -616,7 +682,7 @@ def main(argv: Sequence[str]) -> int:
 
         selection = build_selection(args, source_root)
         if should_confirm_all(selection) and not args.yes and not args.dry_run:
-            count = len(selection.matt) + len(selection.ecc)
+            count = sum(len(getattr(selection, key)) for key in REPOS)
             if not prompt_yes_no(f"This will deploy {count} skills. Continue?"):
                 print("Cancelled.")
                 return 1

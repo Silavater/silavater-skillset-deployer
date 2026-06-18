@@ -26,7 +26,8 @@ silavater-skillset-deployer/
 └─ vendor/
    └─ skill-sources/
       ├─ mattpocock-skills/
-      └─ affaan-m-ecc/
+      ├─ affaan-m-ecc/
+      └─ ponytail/
 ```
 
 ## What each part does
@@ -38,7 +39,7 @@ silavater-skillset-deployer/
 - `scripts/SkillDeployer-TUI.cmd` — Windows launcher for the terminal UI.
 - `scripts/Deploy-SkillSet.cmd` — legacy Windows launcher for the PowerShell implementation.
 - `scripts/Deploy-SkillSet.ps1` — legacy PowerShell implementation that deploys curated skill sets from the local mirrors via `npx skills add`.
-- `scripts/Update-SkillSources.py` — Python updater for the two local mirrored upstream repositories.
+- `scripts/Update-SkillSources.py` — Python updater for the local mirrored upstream repositories.
 - `scripts/Update-SkillSources.cmd` — Windows launcher for the Python updater.
 - `docs/SKILL_CATALOG.md` — generated catalog of available skills, suggested skill sets, deployment commands, known caveats, and upstream source/license notes.
 - `docs/SKILL_CATALOG.zh-TW.md` — Traditional Chinese catalog guide.
@@ -85,6 +86,7 @@ This project packages local mirrors and deployment helpers for selected agent sk
 |---|---|---|---|
 | [mattpocock/skills](https://github.com/mattpocock/skills) | Skills for real engineering workflows | MIT | `vendor/skill-sources/mattpocock-skills` |
 | [affaan-m/ECC](https://github.com/affaan-m/ECC) | Cross-harness agent workflow system and skill catalog | MIT | `vendor/skill-sources/affaan-m-ecc` |
+| [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | Skills-only mirror for YAGNI and over-engineering review workflows | MIT | `vendor/skill-sources/ponytail` |
 
 The files under `vendor/skill-sources/` are mirrored from the upstream repositories above. This repository adds a portable deployment wrapper, curated skill sets, and documentation around those mirrored sources.
 
@@ -92,7 +94,9 @@ All upstream content remains the property of its respective authors and contribu
 
 ## Disclaimer
 
-This is an unofficial deployment package. It is not an official distribution of `mattpocock/skills` or `affaan-m/ECC`, and it is not affiliated with, endorsed by, or maintained by the upstream authors unless explicitly stated.
+This is an unofficial deployment package. It is not an official distribution of `mattpocock/skills`, `affaan-m/ECC`, or `DietrichGebert/ponytail`, and it is not affiliated with, endorsed by, or maintained by the upstream authors unless explicitly stated.
+
+Ponytail is mirrored here as `SKILL.md` content only. This deployer does not install Ponytail's plugin package, lifecycle hooks, commands, or mode-tracking runtime; use the upstream Ponytail install flow if you want the full always-on plugin behavior.
 
 For bug reports or feature requests about the original skills, refer to the upstream repositories. For issues with this packaging/deployment script, use this repository's issue tracker.
 
@@ -166,7 +170,7 @@ Deployment modes:
 
 ## Update local upstream mirrors
 
-When the upstream skill repositories change, refresh both local mirrors with:
+When the upstream skill repositories change, refresh all local mirrors with:
 
 ```cmd
 .\scripts\Update-SkillSources.cmd
@@ -191,12 +195,14 @@ Update only one mirror:
 ```cmd
 .\scripts\Update-SkillSources.cmd --repo mattpocock-skills
 .\scripts\Update-SkillSources.cmd --repo affaan-m-ecc
+.\scripts\Update-SkillSources.cmd --repo ponytail
 ```
 
 The updater manages:
 
 - `vendor/skill-sources/mattpocock-skills` from `https://github.com/mattpocock/skills.git`
 - `vendor/skill-sources/affaan-m-ecc` from `https://github.com/affaan-m/ECC.git`
+- `vendor/skill-sources/ponytail` from `https://github.com/DietrichGebert/ponytail.git`, sparse-checkout to `skills/` plus `LICENSE`
 
 It refuses to update a mirror with local changes, the wrong origin URL, a detached/wrong branch, or a diverged history. Git commands use a process-local `safe.directory` setting, so the script can handle copied Windows checkouts without changing global Git config.
 
@@ -256,7 +262,8 @@ cd "D:\projects\target-project"
 
 | Set | Purpose |
 |---|---|
-| `core-dev` | Daily development: code understanding, debugging, TDD, handoff, verification. |
+| `core-dev` | Daily development: code understanding, debugging, TDD, handoff, verification, plus Ponytail over-engineering review. |
+| `lean-dev` | Anti-overengineering: YAGNI, minimal implementations, deletion-first reviews, and Ponytail debt tracking. |
 | `env-setup` | Environment setup: CLI/package/workspace audit, docs lookup, safety guardrails. |
 | `research` | Search-first research, source collection, docs lookup, decision summaries. |
 | `security` | Secrets, MCPs, config, hooks, input boundaries, dangerous operation review. |
@@ -266,9 +273,10 @@ cd "D:\projects\target-project"
 | `agent-ops` | Skill scouting, stocktake, context, parallelism, local knowledge management. |
 | `matt-all` | All primary Matt Pocock skills from the local mirror. |
 | `ecc-all` | All primary ECC skills from the local mirror. |
-| `all` | All primary skills from both mirrors. |
+| `pony-all` | All Ponytail `SKILL.md` skills from the skills-only mirror. |
+| `all` | All primary skills from every mirror. |
 
-Avoid `ecc-all` or `all` unless you intentionally want a very large active skill surface.
+Avoid `ecc-all` or `all` unless you intentionally want a very large active skill surface. Keep Ponytail's full plugin/hook behavior separate from this skills-only deployer.
 
 ## Refresh the catalog
 

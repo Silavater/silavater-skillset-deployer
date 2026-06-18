@@ -26,7 +26,8 @@ silavater-skillset-deployer/
 └─ vendor/
    └─ skill-sources/
       ├─ mattpocock-skills/
-      └─ affaan-m-ecc/
+      ├─ affaan-m-ecc/
+      └─ ponytail/
 ```
 
 ## 各部分用途
@@ -38,7 +39,7 @@ silavater-skillset-deployer/
 - `scripts/SkillDeployer-TUI.cmd`：Windows 上呼叫終端 UI 的啟動器。
 - `scripts/Deploy-SkillSet.cmd`：舊版 PowerShell 部署器的 Windows 啟動器。
 - `scripts/Deploy-SkillSet.ps1`：舊版 PowerShell 實作，透過 `npx skills add` 從本機鏡像部署已整理好的技能集。
-- `scripts/Update-SkillSources.py`：用 Python 更新兩個本機上游 mirror 的腳本。
+- `scripts/Update-SkillSources.py`：用 Python 更新本機上游 mirror 的腳本。
 - `scripts/Update-SkillSources.cmd`：Windows 上呼叫 Python 更新腳本的啟動器。
 - `docs/SKILL_CATALOG.md`：自動產生的英文技能目錄，包含可用技能、建議技能集、部署指令、已知注意事項與上游來源／授權說明。
 - `docs/SKILL_CATALOG.zh-TW.md`：繁體中文技能目錄。
@@ -79,12 +80,13 @@ git --version
 
 ## Attribution / 來源與致謝
 
-This project packages local mirrors and deployment helpers for selected agent skills from:
+本專案為下列來源的 selected agent skills 提供本機 mirror 與部署輔助：
 
 | Upstream | Description | License | Local path |
 |---|---|---|---|
 | [mattpocock/skills](https://github.com/mattpocock/skills) | Skills for real engineering workflows | MIT | `vendor/skill-sources/mattpocock-skills` |
 | [affaan-m/ECC](https://github.com/affaan-m/ECC) | Cross-harness agent workflow system and skill catalog | MIT | `vendor/skill-sources/affaan-m-ecc` |
+| [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | YAGNI 與 over-engineering review 工作流的 skills-only mirror | MIT | `vendor/skill-sources/ponytail` |
 
 `vendor/skill-sources/` 內的 skill 來源於上述上游專案。本專案僅提供本機 mirror、skill set 分組、可攜式部署 wrapper 與文件，並非上述 repository 的官方發行版。
 
@@ -92,9 +94,11 @@ This project packages local mirrors and deployment helpers for selected agent sk
 
 ## Disclaimer / 非官方聲明
 
-This is an unofficial deployment package. It is not an official distribution of `mattpocock/skills` or `affaan-m/ECC`, and it is not affiliated with, endorsed by, or maintained by the upstream authors unless explicitly stated.
+這是非官方部署套件。除非另有明確說明，否則它不是 `mattpocock/skills`、`affaan-m/ECC` 或 `DietrichGebert/ponytail` 的官方發行版，也不代表受到上游作者認可、背書或維護。
 
-本專案不是 `mattpocock/skills` 或 `affaan-m/ECC` 的官方發行版。原始 skills 的 bug report 或 feature request 請回報至上游 repositories；此打包／部署腳本相關問題則請回報到本 repository。
+本專案只鏡像 Ponytail 的 `SKILL.md` 內容，不安裝 Ponytail plugin package、lifecycle hooks、commands 或 mode-tracking runtime。如果你需要 Ponytail 的 always-on plugin 行為，請改用上游 Ponytail 的官方安裝流程。
+
+原始 skills 的 bug report 或 feature request 請回報至上游 repositories；此打包／部署腳本相關問題則請回報到本 repository。
 
 ## 從目標專案快速部署
 
@@ -191,12 +195,14 @@ py -3 .\scripts\Update-SkillSources.py
 ```cmd
 .\scripts\Update-SkillSources.cmd --repo mattpocock-skills
 .\scripts\Update-SkillSources.cmd --repo affaan-m-ecc
+.\scripts\Update-SkillSources.cmd --repo ponytail
 ```
 
 更新腳本管理的來源是：
 
 - `vendor/skill-sources/mattpocock-skills`：`https://github.com/mattpocock/skills.git`
 - `vendor/skill-sources/affaan-m-ecc`：`https://github.com/affaan-m/ECC.git`
+- `vendor/skill-sources/ponytail`：`https://github.com/DietrichGebert/ponytail.git`，使用 sparse checkout，只保留 `skills/` 與 `LICENSE`
 
 如果 mirror 有本機變更、origin URL 不符合、目前不在預期的 `main` 分支，或分支歷史已經 diverged，腳本會拒絕更新，避免覆蓋手動修改。Git 指令會使用單次程序的 `safe.directory` 設定，因此能處理 Windows 複製過來後 owner 不一致的 checkout，而不需要修改全域 Git 設定。
 
@@ -256,7 +262,8 @@ cd "D:\projects\target-project"
 
 | 技能集 | 用途 |
 |---|---|
-| `core-dev` | 日常開發：程式碼理解、除錯、TDD、交接與驗證。 |
+| `core-dev` | 日常開發：程式碼理解、除錯、TDD、交接、驗證，加上 Ponytail over-engineering review。 |
+| `lean-dev` | 反過度工程：YAGNI、最小可行實作、以刪減優先的 review 與 Ponytail debt 追蹤。 |
 | `env-setup` | 環境設定：CLI／套件／工作區稽核、文件查詢與安全防護。 |
 | `research` | 先搜尋再研究、來源蒐集、文件查詢與決策摘要。 |
 | `security` | 秘密資訊、MCP、設定、hooks、輸入邊界與危險操作審查。 |
@@ -266,9 +273,10 @@ cd "D:\projects\target-project"
 | `agent-ops` | 技能偵察、盤點、上下文、平行化與本機知識管理。 |
 | `matt-all` | 本機鏡像中的所有主要 Matt Pocock 技能。 |
 | `ecc-all` | 本機鏡像中的所有主要 ECC 技能。 |
-| `all` | 兩個鏡像中的所有主要技能。 |
+| `pony-all` | skills-only mirror 中的所有 Ponytail `SKILL.md` 技能。 |
+| `all` | 所有 mirror 中的主要技能。 |
 
-除非你刻意需要非常大的啟用技能範圍，否則請避免使用 `ecc-all` 或 `all`。
+除非你刻意需要非常大的啟用技能範圍，否則請避免使用 `ecc-all` 或 `all`。Ponytail 的完整 plugin/hook 行為請與這個 skills-only deployer 分開處理。
 
 ## 重新整理技能目錄
 
