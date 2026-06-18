@@ -1,29 +1,29 @@
 ﻿# 本機技能目錄 / Local Skill Catalog
 
-此檔目前同步自最新英文 catalog，以確保 skill 名稱、數量與本機路徑準確。Skill 描述保留上游原文，避免翻譯後改變觸發語意。
+此檔目前同步自最新英文 catalog，以確保 skill 名稱、數量與本機路徑準確。完整技能表中的 `Purpose` 描述保留上游原文，避免翻譯後改變 skill 觸發語意；導覽、部署方式與推薦技能集說明則以繁體中文呈現。
 
 由 `scripts/Deploy-SkillSet.cmd -UpdateCatalog -DryRun` 根據本機 mirrors 產生。
 
 ## 本機來源 / Local Sources
 
-| Source | Local path | Count |
+| 來源 | 本機路徑 | 數量 |
 |---|---:|---:|
 | mattpocock/skills | `vendor/skill-sources/mattpocock-skills` | 23 |
 | affaan-m/ECC | `vendor/skill-sources/affaan-m-ecc` | 271 |
 | DietrichGebert/ponytail | `vendor/skill-sources/ponytail` | 5 |
-| Total | local mirror | 299 |
+| 合計 | 本機 mirror | 299 |
 
 ## 來源與授權 / Credits and Licenses
 
 此目錄引用第三方 skill repositories 的本機 mirrors，以支援離線且可重複的部署：
 
-| Upstream | Local path | License |
+| 上游來源 | 本機路徑 | 授權 |
 |---|---|---|
 | [mattpocock/skills](https://github.com/mattpocock/skills) | `vendor/skill-sources/mattpocock-skills` | MIT |
 | [affaan-m/ECC](https://github.com/affaan-m/ECC) | `vendor/skill-sources/affaan-m-ecc` | MIT |
 | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | `vendor/skill-sources/ponytail` | MIT |
 
-`vendor/skill-sources/` 底下的 mirrored skill sources 來自上述上游專案。本 repository 是獨立且非官方的打包／部署輔助工具；除非另有明確說明，否則不代表受到上游作者認可、背書或維護。
+`vendor/skill-sources/` 底下的 mirrored skill sources 來自上述上游專案。本 repository 是獨立且非官方的打包／部署輔助工具；除非另有明確說明，否則不代表受到上游作者認可、背書或維護。Ponytail 在此僅以 skills-only mirror 形式提供，不包含上游 plugin hooks、commands 或 runtime 行為。
 
 使用、修改或重新散布這些 mirrored sources 時，請保留上游 license files 與 attribution notices。原始來源、文件、歷史與授權條款請見 `../THIRD_PARTY_NOTICES.md` 與各上游 repository。
 
@@ -35,15 +35,15 @@
 
 日常開發：程式碼理解、除錯、TDD、交接、驗證，並加入 Ponytail over-engineering review。
 
-Deploy project scope:
+部署到專案範圍：
 
 ```cmd
 .\scripts\Deploy-SkillSet-Py.cmd --set core-dev
 ```
 
-Skills:
+包含技能：
 
-| Repo | Skills |
+| 來源 | 技能 |
 |---|---|
 | mattpocock/skills | diagnosing-bugs, tdd, codebase-design, handoff, writing-great-skills |
 | affaan-m/ECC | terminal-ops, verification-loop, git-workflow, search-first, tdd-workflow |
@@ -53,172 +53,174 @@ Skills:
 
 反過度工程：YAGNI、最小可行實作、以刪減優先的 review 與 Ponytail debt 追蹤。
 
-Deploy project scope:
+部署到專案範圍：
 
 ```cmd
 .\scripts\Deploy-SkillSet-Py.cmd --set lean-dev
 ```
 
-Skills:
+包含技能：
 
-| Repo | Skills |
+| 來源 | 技能 |
 |---|---|
 | DietrichGebert/ponytail | ponytail, ponytail-review, ponytail-audit, ponytail-debt, ponytail-help |
 
 ### env-setup
 
-Environment setup: CLI/package/workspace audit, docs lookup, and safety guardrails.
+環境設定：CLI／套件／工作區稽核、文件查詢與安全防護。
 
-Deploy project scope:
+部署到專案範圍：
 
 ```cmd
 .\scripts\Deploy-SkillSet-Py.cmd --set env-setup
 ```
 
-Skills:
+包含技能：
 
-| Repo | Skills |
+| 來源 | 技能 |
 |---|---|
 | mattpocock/skills | diagnosing-bugs, codebase-design, handoff |
 | affaan-m/ECC | terminal-ops, workspace-surface-audit, research-ops, search-first, safety-guard, security-scan |
 
 ### research
 
-Research: search first, collect sources, inspect docs, and produce decision summaries.
+研究工作流：先搜尋、蒐集來源、檢查文件，並產出決策摘要。
 
-Deploy project scope:
+部署到專案範圍：
 
 ```cmd
 .\scripts\Deploy-SkillSet-Py.cmd --set research
 ```
 
-Skills:
+包含技能：
 
-| Repo | Skills |
+| 來源 | 技能 |
 |---|---|
 | mattpocock/skills | codebase-design, grill-me, handoff |
 | affaan-m/ECC | research-ops, search-first, documentation-lookup, market-research, skill-scout |
 
 ### security
 
-Security review: secrets, MCPs, config files, hooks, input boundaries, and dangerous operations.
+安全審查：秘密資訊、MCP、設定檔、hooks、輸入邊界與危險操作。
 
-Deploy project scope:
+部署到專案範圍：
 
 ```cmd
 .\scripts\Deploy-SkillSet-Py.cmd --set security
 ```
 
-Skills:
+包含技能：
 
-| Repo | Skills |
+| 來源 | 技能 |
 |---|---|
 | mattpocock/skills | diagnosing-bugs, git-guardrails-claude-code |
 | affaan-m/ECC | security-review, security-scan, safety-guard, gateguard, llm-trading-agent-security |
 
 ### frontend
 
-Frontend/UI: React/Next, performance, accessibility, motion, and polish.
+前端／UI：React／Next、效能、無障礙、動效與細節打磨。
 
-Deploy project scope:
+部署到專案範圍：
 
 ```cmd
 .\scripts\Deploy-SkillSet-Py.cmd --set frontend
 ```
 
-Skills:
+包含技能：
 
-| Repo | Skills |
+| 來源 | 技能 |
 |---|---|
 | mattpocock/skills | prototype, tdd, codebase-design |
 | affaan-m/ECC | frontend-patterns, frontend-a11y, react-patterns, react-performance, react-testing, motion-foundations, motion-patterns, make-interfaces-feel-better, vite-patterns |
 
 ### backend-ts
 
-TypeScript backend: API, database, ORM, cache, Node/Next/Nest patterns.
+TypeScript 後端：API、資料庫、ORM、快取，以及 Node／Next／Nest patterns。
 
-Deploy project scope:
+部署到專案範圍：
 
 ```cmd
 .\scripts\Deploy-SkillSet-Py.cmd --set backend-ts
 ```
 
-Skills:
+包含技能：
 
-| Repo | Skills |
+| 來源 | 技能 |
 |---|---|
 | mattpocock/skills | diagnosing-bugs, tdd, codebase-design |
 | affaan-m/ECC | api-design, backend-patterns, nestjs-patterns, prisma-patterns, postgres-patterns, redis-patterns, mcp-server-patterns, nodejs-keccak256 |
 
 ### python
 
-Python: idioms, pytest, Django, data, and ML workflows.
+Python：慣用寫法、pytest、Django、資料與機器學習工作流。
 
-Deploy project scope:
+部署到專案範圍：
 
 ```cmd
 .\scripts\Deploy-SkillSet-Py.cmd --set python
 ```
 
-Skills:
+包含技能：
 
-| Repo | Skills |
+| 來源 | 技能 |
 |---|---|
 | mattpocock/skills | diagnosing-bugs, tdd, codebase-design |
 | affaan-m/ECC | python-patterns, python-testing, django-patterns, django-tdd, django-verification, mle-workflow, pytorch-patterns |
 
 ### agent-ops
 
-Agent operations: skill scouting, stocktake, quality, context, parallelism, and local knowledge management.
+Agent operations：技能偵察、盤點、品質、上下文、平行化與本機知識管理。
 
-Deploy project scope:
+部署到專案範圍：
 
 ```cmd
 .\scripts\Deploy-SkillSet-Py.cmd --set agent-ops
 ```
 
-Skills:
+包含技能：
 
-| Repo | Skills |
+| 來源 | 技能 |
 |---|---|
 | mattpocock/skills | writing-great-skills, handoff, grill-with-docs |
 | affaan-m/ECC | skill-scout, skill-stocktake, skill-comply, knowledge-ops, parallel-execution-optimizer, strategic-compact, iterative-retrieval, workspace-surface-audit |
 
 ## 部署指令 / Deployment Commands
 
-Windows 上建議使用 `scripts\Deploy-SkillSet-Py.cmd` 呼叫 Python deployer。它支援互動選擇、明確指定 `--target`、curated sets、單一或多個 skills，以及 dry run。
+Windows 上建議使用 `scripts\Deploy-SkillSet-Py.cmd` 呼叫 Python deployer。它支援互動選擇、明確指定 `--target`、整理好的技能集、單一或多個 skills，以及 dry run。
 
 ```cmd
-# Preview only
+# 只預覽，不寫入任何變更
 .\scripts\Deploy-SkillSet-Py.cmd --set env-setup --dry-run
 
-# Install a curated set into this workspace
+# 將整理好的技能集安裝到目前 workspace
 .\scripts\Deploy-SkillSet-Py.cmd --set env-setup
 
-# Install for every supported agent surface, not just OpenCode
+# 安裝到所有支援的 agent surface，而不是只安裝到 OpenCode
 .\scripts\Deploy-SkillSet-Py.cmd --set env-setup --agent *
 
-# Install a curated set globally
+# 將整理好的技能集安裝到 global scope
 .\scripts\Deploy-SkillSet-Py.cmd --set core-dev --scope global
 
-# Regenerate this catalog from local mirrors
+# 根據本機 mirrors 重新產生英文 catalog
 .\scripts\Deploy-SkillSet.cmd -UpdateCatalog -DryRun
 
-# Deploy individual skills
+# 部署單一或多個 skills
 .\scripts\Deploy-SkillSet-Py.cmd --skill matt:handoff --skill ecc:terminal-ops --skill pony:ponytail-review
 ```
 
-## CC Switch Note
+## CC Switch 備註
 
-CC Switch 可以分開評估。它比較像環境／模型／設定切換器，而不是此 skill catalog 的替代品。先完成本機 skill mirror 與部署腳本，再把 CC Switch 加進 `env-setup` 工作流或獨立的環境切換任務。
+CC Switch 可以分開評估。它比較像環境／模型／設定切換器，而不是此技能目錄的替代品。先完成本機 skill mirror 與部署腳本，再把 CC Switch 加進 `env-setup` 工作流或獨立的環境切換任務。
 
 ## 已知問題：`reasoning part 0 not found`
 
-這通常是 session viewer／gateway／模型 fallback 的中繼資料解析問題：呼叫端嘗試讀取 `reasoning[0]`，但模型回應沒有該段落。如果 CLI 指令完成且檔案有產出，通常不會阻擋 skill mirroring 或 deployment。若要除錯，請檢查 model names、fallback providers、OpenCode session viewer，以及 gateway 是否支援 reasoning parts。
+這通常是 session viewer／gateway／模型 fallback 的中繼資料解析問題：呼叫端嘗試讀取 `reasoning[0]`，但模型回應沒有該段落。如果 CLI 指令完成且檔案有產出，通常不會阻擋 skill mirroring 或部署。若要除錯，請檢查 model names、fallback providers、OpenCode session viewer，以及 gateway 是否支援 reasoning parts。
 
-## Full Local Skill Catalog
+## 完整本機技能目錄 / Full Local Skill Catalog
 
-| Repo | Skill | Purpose | Local file |
+下表的 `用途 / Purpose` 欄位保留上游英文原文，因為這些描述同時承載 skill 的觸發條件與使用邊界。若翻譯成中文，可能讓 agent 對何時啟用 skill 的判斷與上游原意產生偏差。
+
+| 來源 | 技能 | 用途 / Purpose | 本機檔案 |
 |---|---|---|---|
 | mattpocock/skills | `ask-matt` | Ask which skill or flow fits your situation. A router over the user-invoked skills in this repo. | `vendor\skill-sources\mattpocock-skills\skills\engineering\ask-matt\SKILL.md` |
 | mattpocock/skills | `codebase-design` | Shared vocabulary for designing deep modules. Use when the user wants to design or improve a module's interface, find deepening opportunities, decide where a seam goes, make code more testable or AI-navigable, or when another skill needs the deep-module vocabulary. | `vendor\skill-sources\mattpocock-skills\skills\engineering\codebase-design\SKILL.md` |
