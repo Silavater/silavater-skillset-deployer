@@ -17,6 +17,8 @@ silavater-skillset-deployer/
 ├─ scripts/
 │  ├─ Deploy-SkillSet.cmd
 │  ├─ Deploy-SkillSet.ps1
+│  ├─ Deploy-SkillSet-Py.cmd
+│  ├─ Deploy-SkillSet.py
 │  ├─ Update-SkillSources.cmd
 │  └─ Update-SkillSources.py
 └─ vendor/
@@ -28,8 +30,10 @@ silavater-skillset-deployer/
 ## What each part does
 
 - `vendor/skill-sources/` — local mirrors of upstream skill repositories. This is the offline/cacheable source of truth.
-- `scripts/Deploy-SkillSet.cmd` — recommended Windows launcher. It calls the PowerShell implementation with a process-local execution-policy bypass, so copied unsigned scripts can run without changing machine policy.
-- `scripts/Deploy-SkillSet.ps1` — PowerShell implementation that deploys curated skill sets from the local mirrors via `npx skills add`.
+- `scripts/Deploy-SkillSet.py` — recommended deployer. It supports interactive selection, curated sets, individual skills, explicit target roots, and dry runs.
+- `scripts/Deploy-SkillSet-Py.cmd` — Windows launcher for the Python deployer.
+- `scripts/Deploy-SkillSet.cmd` — legacy Windows launcher for the PowerShell implementation.
+- `scripts/Deploy-SkillSet.ps1` — legacy PowerShell implementation that deploys curated skill sets from the local mirrors via `npx skills add`.
 - `scripts/Update-SkillSources.py` — Python updater for the two local mirrored upstream repositories.
 - `scripts/Update-SkillSources.cmd` — Windows launcher for the Python updater.
 - `docs/SKILL_CATALOG.md` — generated catalog of available skills, suggested skill sets, deployment commands, known caveats, and upstream source/license notes.
@@ -37,6 +41,37 @@ silavater-skillset-deployer/
 - `THIRD_PARTY_NOTICES.md` — third-party source, license, and local mirror notices.
 - `README.md` — this portable usage guide.
 - `README.zh-TW.md` — Traditional Chinese usage guide.
+
+## Environment Requirements
+
+Required for normal deployment:
+
+- Windows is the primary supported environment for the included `.cmd` launchers.
+- Python 3 must be available as either `py -3` or `python`.
+- Node.js / npm must be installed, including `npx`.
+- Network access is required the first time `npx skills` resolves the `skills` package.
+
+Required for updating local mirrors:
+
+- Git must be installed and available as `git`.
+- Network access to GitHub is required when fetching or cloning the mirrored repositories.
+
+Optional / legacy:
+
+- PowerShell 5+ or PowerShell 7+ is only needed for the legacy `Deploy-SkillSet.ps1` deployer and catalog generation.
+
+Quick environment check:
+
+```cmd
+py -3 --version
+python --version
+node --version
+npm --version
+npx --version
+git --version
+```
+
+It is okay if only one of `py -3` or `python` works. The Windows launchers try `py -3` first, then `python`.
 
 ## Attribution / Upstream Sources
 
@@ -57,25 +92,62 @@ This is an unofficial deployment package. It is not an official distribution of 
 
 For bug reports or feature requests about the original skills, refer to the upstream repositories. For issues with this packaging/deployment script, use this repository's issue tracker.
 
-## Quick use inside this folder
+## Quick deploy from a target project
 
-From inside `silavater-skillset-deployer`:
+Recommended pattern: keep this package inside the target project, but run the deployer from the target project root. Project-scoped installs then land in the project, not in the deployer folder.
+
+Before deploying, confirm the environment requirements above are available.
 
 ```cmd
+cd "D:\projects\target-project"
+
+# Interactive selection menu
+.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd
+
 # Preview only; no changes
-.\scripts\Deploy-SkillSet.cmd -Set env-setup -Scope project -DryRun
+.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup --dry-run
 
-# Install the environment setup set into this project
-.\scripts\Deploy-SkillSet.cmd -Set env-setup -Scope project
+# Install the environment setup set into the target project
+.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup
 ```
 
-Use the `.cmd` launcher on Windows unless you intentionally want to call PowerShell yourself. It avoids the common `Deploy-SkillSet.ps1 is not digitally signed` / `PSSecurityException` failure without permanently relaxing your system execution policy.
-
-The script defaults to `-Agent opencode`. To deploy to every supported agent surface:
+The Python deployer uses its own `vendor/skill-sources/` as the source root. The target root defaults to the current directory. If you run from inside `silavater-skillset-deployer`, use `--target` to avoid installing into the deployer folder:
 
 ```cmd
-.\scripts\Deploy-SkillSet.cmd -Set env-setup -Scope project -Agent *
+.\scripts\Deploy-SkillSet-Py.cmd --set env-setup --target "D:\projects\target-project"
 ```
+
+For project-scope installs, the Python deployer refuses to install into the deployer folder unless you pass `--allow-deployer-target`.
+
+The script defaults to `--agent opencode`. To deploy to every supported agent surface:
+
+```cmd
+.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup --agent *
+```
+
+List available choices:
+
+```cmd
+.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --list sets
+.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --list skills
+```
+
+Deploy individual skills without using the menu:
+
+```cmd
+.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --skill matt:handoff --skill ecc:terminal-ops
+```
+
+Deployment modes:
+
+| Mode | Command |
+|---|---|
+| Interactive menu | `.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd` |
+| Curated set | `.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup` |
+| Individual skills | `.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --skill matt:handoff --skill ecc:terminal-ops` |
+| Full mirror | `.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set matt-all` |
+| Explicit target | `.\scripts\Deploy-SkillSet-Py.cmd --set env-setup --target "D:\projects\target-project"` |
+| Preview only | `.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup --dry-run` |
 
 ## Update local upstream mirrors
 
@@ -125,11 +197,11 @@ Then run from inside the copied folder:
 
 ```cmd
 cd "D:\projects\target-project\silavater-skillset-deployer"
-.\scripts\Deploy-SkillSet.cmd -Set env-setup -Scope project -DryRun
-.\scripts\Deploy-SkillSet.cmd -Set env-setup -Scope project
+.\scripts\Deploy-SkillSet-Py.cmd --set env-setup --target "D:\projects\target-project" --dry-run
+.\scripts\Deploy-SkillSet-Py.cmd --set env-setup --target "D:\projects\target-project"
 ```
 
-Important: `-Scope project` installs relative to the current directory. If you run the script from inside `silavater-skillset-deployer`, the skills are installed into that folder's project surface. If you want skills installed at the target project root, copy the `vendor/`, `scripts/`, and `docs/` folders from this package into the target root, then run the script there.
+Important: project scope installs into the target root. The Python deployer defaults that target to the current directory, but `--target` lets you make the destination explicit.
 
 ## Recommended install pattern for target projects
 
@@ -137,18 +209,19 @@ For a target project root, use this structure:
 
 ```text
 target-project/
-├─ docs/SKILL_CATALOG.md
-├─ scripts/Deploy-SkillSet.cmd
-├─ scripts/Deploy-SkillSet.ps1
-└─ vendor/skill-sources/...
+└─ silavater-skillset-deployer/
+   ├─ docs/SKILL_CATALOG.md
+   ├─ scripts/Deploy-SkillSet-Py.cmd
+   ├─ scripts/Deploy-SkillSet.py
+   └─ vendor/skill-sources/...
 ```
 
 Then:
 
 ```cmd
 cd "D:\projects\target-project"
-.\scripts\Deploy-SkillSet.cmd -Set env-setup -Scope project -DryRun
-.\scripts\Deploy-SkillSet.cmd -Set env-setup -Scope project
+.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup --dry-run
+.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup
 ```
 
 ## Available curated sets
@@ -171,6 +244,8 @@ Avoid `ecc-all` or `all` unless you intentionally want a very large active skill
 
 ## Refresh the catalog
 
+Catalog generation is still handled by the legacy PowerShell implementation:
+
 ```cmd
 .\scripts\Deploy-SkillSet.cmd -UpdateCatalog -DryRun
 ```
@@ -180,10 +255,10 @@ Avoid `ecc-all` or `all` unless you intentionally want a very large active skill
 ```powershell
 powershell -NoProfile -Command "[scriptblock]::Create((Get-Content -LiteralPath '.\scripts\Deploy-SkillSet.ps1' -Raw)) | Out-Null; 'parse-ok'"
 .\scripts\Update-SkillSources.cmd --dry-run
-.\scripts\Deploy-SkillSet.cmd -Set env-setup -Scope project -DryRun
+.\scripts\Deploy-SkillSet-Py.cmd --set env-setup --dry-run
 ```
 
-If you prefer direct PowerShell invocation, use an explicit process-local bypass instead of changing system policy:
+If you need the legacy PowerShell deployer, use the `.cmd` launcher or an explicit process-local bypass instead of changing system policy:
 
 ```powershell
 powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\Deploy-SkillSet.ps1 -Set env-setup -Scope project -DryRun

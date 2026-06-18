@@ -17,6 +17,8 @@ silavater-skillset-deployer/
 ├─ scripts/
 │  ├─ Deploy-SkillSet.cmd
 │  ├─ Deploy-SkillSet.ps1
+│  ├─ Deploy-SkillSet-Py.cmd
+│  ├─ Deploy-SkillSet.py
 │  ├─ Update-SkillSources.cmd
 │  └─ Update-SkillSources.py
 └─ vendor/
@@ -28,8 +30,10 @@ silavater-skillset-deployer/
 ## 各部分用途
 
 - `vendor/skill-sources/`：上游技能儲存庫的本機鏡像。這是可離線、可快取的真實來源。
-- `scripts/Deploy-SkillSet.cmd`：建議的 Windows 啟動器。它會用單次程序的 execution-policy bypass 呼叫 PowerShell 實作，因此複製來的未簽署腳本不需要修改系統原則也能執行。
-- `scripts/Deploy-SkillSet.ps1`：PowerShell 實作，透過 `npx skills add` 從本機鏡像部署已整理好的技能集。
+- `scripts/Deploy-SkillSet.py`：建議使用的部署器，支援互動選單、整理好的 skill set、單一 skill、指定 target root 與 dry run。
+- `scripts/Deploy-SkillSet-Py.cmd`：Windows 上呼叫 Python 部署器的啟動器。
+- `scripts/Deploy-SkillSet.cmd`：舊版 PowerShell 部署器的 Windows 啟動器。
+- `scripts/Deploy-SkillSet.ps1`：舊版 PowerShell 實作，透過 `npx skills add` 從本機鏡像部署已整理好的技能集。
 - `scripts/Update-SkillSources.py`：用 Python 更新兩個本機上游 mirror 的腳本。
 - `scripts/Update-SkillSources.cmd`：Windows 上呼叫 Python 更新腳本的啟動器。
 - `docs/SKILL_CATALOG.md`：自動產生的英文技能目錄，包含可用技能、建議技能集、部署指令、已知注意事項與上游來源／授權說明。
@@ -37,6 +41,37 @@ silavater-skillset-deployer/
 - `THIRD_PARTY_NOTICES.md`：第三方來源、授權與本機鏡像聲明。
 - `README.md`：英文可攜式使用指南。
 - `README.zh-TW.md`：本繁體中文使用指南。
+
+## 環境需求
+
+一般部署需要：
+
+- 主要支援 Windows，因為本套件提供的是 `.cmd` 啟動器。
+- Python 3，需可透過 `py -3` 或 `python` 執行。
+- Node.js / npm，且需包含 `npx`。
+- 第一次讓 `npx skills` 解析 `skills` 套件時需要網路。
+
+更新本機 mirror 需要：
+
+- Git，需可透過 `git` 執行。
+- fetch 或 clone 上游 repository 時需要能連到 GitHub。
+
+選用 / 舊版：
+
+- PowerShell 5+ 或 PowerShell 7+ 只在使用舊版 `Deploy-SkillSet.ps1` 部署器，以及重新產生 catalog 時需要。
+
+快速檢查環境：
+
+```cmd
+py -3 --version
+python --version
+node --version
+npm --version
+npx --version
+git --version
+```
+
+`py -3` 和 `python` 只要其中一個能正常執行即可。Windows 啟動器會先嘗試 `py -3`，再嘗試 `python`。
 
 ## Attribution / 來源與致謝
 
@@ -57,25 +92,62 @@ This is an unofficial deployment package. It is not an official distribution of 
 
 本專案不是 `mattpocock/skills` 或 `affaan-m/ECC` 的官方發行版。原始 skills 的 bug report 或 feature request 請回報至上游 repositories；此打包／部署腳本相關問題則請回報到本 repository。
 
-## 在此資料夾中快速使用
+## 從目標專案快速部署
 
-在 `silavater-skillset-deployer` 內執行：
+建議方式：把這個套件放在目標專案內，但從目標專案 root 執行部署器。這樣 project scope 會安裝到目標專案，而不是安裝到 deployer 資料夾本身。
+
+部署前，請先確認上方環境需求已可用。
 
 ```cmd
+cd "D:\projects\target-project"
+
+# 互動選單
+.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd
+
 # 只預覽，不做任何變更
-.\scripts\Deploy-SkillSet.cmd -Set env-setup -Scope project -DryRun
+.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup --dry-run
 
-# 將環境設定技能集安裝到此專案
-.\scripts\Deploy-SkillSet.cmd -Set env-setup -Scope project
+# 將 env-setup 安裝到目標專案
+.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup
 ```
 
-Windows 上建議優先使用 `.cmd` 啟動器，除非你刻意要直接呼叫 PowerShell。它可以避開常見的 `Deploy-SkillSet.ps1 未經數位簽署` / `PSSecurityException`，且不會永久放寬系統 execution policy。
-
-腳本預設使用 `-Agent opencode`。若要部署到所有支援的代理操作介面：
+Python 部署器會使用自己套件內的 `vendor/skill-sources/` 作為 source root。target root 預設是目前所在目錄。如果你是在 `silavater-skillset-deployer` 裡面執行，請用 `--target` 避免安裝到 deployer 資料夾：
 
 ```cmd
-.\scripts\Deploy-SkillSet.cmd -Set env-setup -Scope project -Agent *
+.\scripts\Deploy-SkillSet-Py.cmd --set env-setup --target "D:\projects\target-project"
 ```
+
+對於 project-scope 安裝，Python 部署器會拒絕安裝到 deployer 資料夾本身；除非你明確加上 `--allow-deployer-target`。
+
+腳本預設使用 `--agent opencode`。若要部署到所有支援的代理操作介面：
+
+```cmd
+.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup --agent *
+```
+
+列出可選項目：
+
+```cmd
+.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --list sets
+.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --list skills
+```
+
+不進互動選單，直接部署單一或多個 skill：
+
+```cmd
+.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --skill matt:handoff --skill ecc:terminal-ops
+```
+
+部署模式速查：
+
+| 模式 | 指令 |
+|---|---|
+| 互動選單 | `.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd` |
+| 整理好的 skill set | `.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup` |
+| 單一或多個 skill | `.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --skill matt:handoff --skill ecc:terminal-ops` |
+| 整個 mirror | `.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set matt-all` |
+| 明確指定目標 | `.\scripts\Deploy-SkillSet-Py.cmd --set env-setup --target "D:\projects\target-project"` |
+| 只預覽 | `.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup --dry-run` |
 
 ## 更新本機上游 mirror
 
@@ -125,11 +197,11 @@ Copy-Item -Recurse -Force ".\silavater-skillset-deployer" "D:\projects\target-pr
 
 ```cmd
 cd "D:\projects\target-project\silavater-skillset-deployer"
-.\scripts\Deploy-SkillSet.cmd -Set env-setup -Scope project -DryRun
-.\scripts\Deploy-SkillSet.cmd -Set env-setup -Scope project
+.\scripts\Deploy-SkillSet-Py.cmd --set env-setup --target "D:\projects\target-project" --dry-run
+.\scripts\Deploy-SkillSet-Py.cmd --set env-setup --target "D:\projects\target-project"
 ```
 
-重要：`-Scope project` 會以目前所在目錄作為安裝基準。如果你在 `silavater-skillset-deployer` 內執行腳本，技能會安裝到該資料夾對應的專案操作介面。若你想把技能安裝到目標專案根目錄，請將此套件中的 `vendor/`、`scripts/`、`docs/` 資料夾複製到目標根目錄，然後在該根目錄執行腳本。
+重要：project scope 會安裝到 target root。Python 部署器預設 target 是目前所在目錄，也可以用 `--target` 明確指定。
 
 ## 目標專案的建議安裝方式
 
@@ -137,18 +209,19 @@ cd "D:\projects\target-project\silavater-skillset-deployer"
 
 ```text
 target-project/
-├─ docs/SKILL_CATALOG.md
-├─ scripts/Deploy-SkillSet.cmd
-├─ scripts/Deploy-SkillSet.ps1
-└─ vendor/skill-sources/...
+└─ silavater-skillset-deployer/
+   ├─ docs/SKILL_CATALOG.md
+   ├─ scripts/Deploy-SkillSet-Py.cmd
+   ├─ scripts/Deploy-SkillSet.py
+   └─ vendor/skill-sources/...
 ```
 
 然後執行：
 
 ```cmd
 cd "D:\projects\target-project"
-.\scripts\Deploy-SkillSet.cmd -Set env-setup -Scope project -DryRun
-.\scripts\Deploy-SkillSet.cmd -Set env-setup -Scope project
+.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup --dry-run
+.\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup
 ```
 
 ## 可用的整理技能集
@@ -171,6 +244,8 @@ cd "D:\projects\target-project"
 
 ## 重新整理技能目錄
 
+目錄產生目前仍由舊版 PowerShell 實作處理：
+
 ```cmd
 .\scripts\Deploy-SkillSet.cmd -UpdateCatalog -DryRun
 ```
@@ -180,10 +255,10 @@ cd "D:\projects\target-project"
 ```powershell
 powershell -NoProfile -Command "[scriptblock]::Create((Get-Content -LiteralPath '.\scripts\Deploy-SkillSet.ps1' -Raw)) | Out-Null; 'parse-ok'"
 .\scripts\Update-SkillSources.cmd --dry-run
-.\scripts\Deploy-SkillSet.cmd -Set env-setup -Scope project -DryRun
+.\scripts\Deploy-SkillSet-Py.cmd --set env-setup --dry-run
 ```
 
-若你偏好直接呼叫 PowerShell，請使用單次程序的 bypass，而不是修改整台機器的系統原則：
+若需要使用舊版 PowerShell 部署器，請使用 `.cmd` 啟動器或單次程序的 bypass，而不是修改整台機器的系統原則：
 
 ```powershell
 powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\Deploy-SkillSet.ps1 -Set env-setup -Scope project -DryRun

@@ -83,7 +83,7 @@ function Get-SkillInfo {
         }
 
     foreach ($file in $skillFiles) {
-        $content = Get-Content -LiteralPath $file.FullName -Raw
+        $content = Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8
         $name = Split-Path -Leaf (Split-Path -Parent $file.FullName)
         $relative = Get-RelativePathFromWorkspace -Path $file.FullName
 
@@ -124,42 +124,42 @@ function Get-PredefinedSets {
     return [ordered]@{
         'core-dev' = @{
             Description = 'Daily development: code understanding, debugging, TDD, handoff, and verification.'
-            Matt = @('diagnose', 'tdd', 'zoom-out', 'handoff', 'write-a-skill')
+            Matt = @('diagnosing-bugs', 'tdd', 'codebase-design', 'handoff', 'writing-great-skills')
             Ecc  = @('terminal-ops', 'verification-loop', 'git-workflow', 'search-first', 'tdd-workflow')
         }
         'env-setup' = @{
             Description = 'Environment setup: CLI/package/workspace audit, docs lookup, and safety guardrails.'
-            Matt = @('diagnose', 'zoom-out', 'handoff')
+            Matt = @('diagnosing-bugs', 'codebase-design', 'handoff')
             Ecc  = @('terminal-ops', 'workspace-surface-audit', 'research-ops', 'search-first', 'safety-guard', 'security-scan')
         }
         'research' = @{
             Description = 'Research: search first, collect sources, inspect docs, and produce decision summaries.'
-            Matt = @('zoom-out', 'grill-me', 'handoff')
+            Matt = @('codebase-design', 'grill-me', 'handoff')
             Ecc  = @('research-ops', 'search-first', 'documentation-lookup', 'market-research', 'skill-scout')
         }
         'security' = @{
             Description = 'Security review: secrets, MCPs, config files, hooks, input boundaries, and dangerous operations.'
-            Matt = @('diagnose', 'git-guardrails-claude-code')
+            Matt = @('diagnosing-bugs', 'git-guardrails-claude-code')
             Ecc  = @('security-review', 'security-scan', 'safety-guard', 'gateguard', 'llm-trading-agent-security')
         }
         'frontend' = @{
             Description = 'Frontend/UI: React/Next, performance, accessibility, motion, and polish.'
-            Matt = @('prototype', 'tdd', 'zoom-out')
+            Matt = @('prototype', 'tdd', 'codebase-design')
             Ecc  = @('frontend-patterns', 'frontend-a11y', 'react-patterns', 'react-performance', 'react-testing', 'motion-foundations', 'motion-patterns', 'make-interfaces-feel-better', 'vite-patterns')
         }
         'backend-ts' = @{
             Description = 'TypeScript backend: API, database, ORM, cache, Node/Next/Nest patterns.'
-            Matt = @('diagnose', 'tdd', 'zoom-out')
+            Matt = @('diagnosing-bugs', 'tdd', 'codebase-design')
             Ecc  = @('api-design', 'backend-patterns', 'nestjs-patterns', 'prisma-patterns', 'postgres-patterns', 'redis-patterns', 'mcp-server-patterns', 'nodejs-keccak256')
         }
         'python' = @{
             Description = 'Python: idioms, pytest, Django, data, and ML workflows.'
-            Matt = @('diagnose', 'tdd', 'zoom-out')
+            Matt = @('diagnosing-bugs', 'tdd', 'codebase-design')
             Ecc  = @('python-patterns', 'python-testing', 'django-patterns', 'django-tdd', 'django-verification', 'mle-workflow', 'pytorch-patterns')
         }
         'agent-ops' = @{
             Description = 'Agent operations: skill scouting, stocktake, quality, context, parallelism, and local knowledge management.'
-            Matt = @('write-a-skill', 'handoff', 'grill-with-docs')
+            Matt = @('writing-great-skills', 'handoff', 'grill-with-docs')
             Ecc  = @('skill-scout', 'skill-stocktake', 'skill-comply', 'knowledge-ops', 'parallel-execution-optimizer', 'strategic-compact', 'iterative-retrieval', 'workspace-surface-audit')
         }
     }
@@ -217,7 +217,7 @@ function Write-Catalog {
         $lines.Add("Deploy project scope:")
         $lines.Add('')
         $lines.Add('```cmd')
-        $lines.Add(".\scripts\Deploy-SkillSet.cmd -Set $key -Scope project")
+        $lines.Add(".\scripts\Deploy-SkillSet-Py.cmd --set $key")
         $lines.Add('```')
         $lines.Add('')
         $lines.Add('Skills:')
@@ -231,23 +231,26 @@ function Write-Catalog {
 
     $lines.Add('## Deployment Commands')
     $lines.Add('')
-    $lines.Add('Use `scripts\Deploy-SkillSet.cmd` on Windows. It launches the PowerShell implementation with a process-local execution-policy bypass, avoiding unsigned-script `PSSecurityException` failures without changing system policy.')
+    $lines.Add('Use `scripts\Deploy-SkillSet-Py.cmd` on Windows for the Python deployer. It supports interactive selection, explicit `--target`, curated sets, individual skills, and dry runs.')
     $lines.Add('')
     $lines.Add('```cmd')
     $lines.Add('# Preview only')
-    $lines.Add('.\scripts\Deploy-SkillSet.cmd -Set env-setup -Scope project -DryRun')
+    $lines.Add('.\scripts\Deploy-SkillSet-Py.cmd --set env-setup --dry-run')
     $lines.Add('')
     $lines.Add('# Install a curated set into this workspace')
-    $lines.Add('.\scripts\Deploy-SkillSet.cmd -Set env-setup -Scope project')
+    $lines.Add('.\scripts\Deploy-SkillSet-Py.cmd --set env-setup')
     $lines.Add('')
     $lines.Add('# Install for every supported agent surface, not just OpenCode')
-    $lines.Add('.\scripts\Deploy-SkillSet.cmd -Set env-setup -Scope project -Agent *')
+    $lines.Add('.\scripts\Deploy-SkillSet-Py.cmd --set env-setup --agent *')
     $lines.Add('')
     $lines.Add('# Install a curated set globally')
-    $lines.Add('.\scripts\Deploy-SkillSet.cmd -Set core-dev -Scope global')
+    $lines.Add('.\scripts\Deploy-SkillSet-Py.cmd --set core-dev --scope global')
     $lines.Add('')
     $lines.Add('# Regenerate this catalog from local mirrors')
     $lines.Add('.\scripts\Deploy-SkillSet.cmd -UpdateCatalog -DryRun')
+    $lines.Add('')
+    $lines.Add('# Deploy individual skills')
+    $lines.Add('.\scripts\Deploy-SkillSet-Py.cmd --skill matt:handoff --skill ecc:terminal-ops')
     $lines.Add('```')
     $lines.Add('')
     $lines.Add('## CC Switch Note')
