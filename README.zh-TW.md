@@ -102,20 +102,23 @@ This is an unofficial deployment package. It is not an official distribution of 
 
 部署前，請先確認上方環境需求已可用。
 
-fresh clone 不會包含 `vendor/skill-sources/`。請先從 deployer 資料夾內 bootstrap 本機 mirror：
+fresh clone 不會包含 `vendor/skill-sources/`。TUI 啟動時會先檢查本機 mirror；如果 `vendor/` 不存在、是空的，或找不到可用的 skill mirror，它會詢問是否先執行 updater 再繼續。
 
-```cmd
-cd "D:\projects\target-project\silavater-skillset-deployer"
-.\scripts\Update-SkillSources.cmd
-```
-
-接著回到目標專案 root 執行部署：
+從目標專案 root 開始：
 
 ```cmd
 cd "D:\projects\target-project"
 
 # TUI：SkillSetDeployMode / SingleSkillDeployMode
 .\silavater-skillset-deployer\scripts\SkillDeployer-TUI.cmd
+```
+
+若要直接使用 CLI，fresh clone 時請先 bootstrap 本機 mirror：
+
+```cmd
+cd "D:\projects\target-project\silavater-skillset-deployer"
+.\scripts\Update-SkillSources.cmd
+cd "D:\projects\target-project"
 
 # 只預覽，不做任何變更
 .\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup --dry-run
@@ -199,6 +202,8 @@ py -3 .\scripts\Update-SkillSources.py
 
 如果 deploy 失敗並提示缺少 local skill sources，請先執行這個 updater。`vendor/` 目錄刻意不追蹤在此 repository 裡。
 
+TUI 會自動做同樣的 mirror 檢查。啟動時如果偵測到缺少或不完整的本機 mirror，會詢問是否更新；如果後續 deploy command 失敗，也會詢問是否執行 updater 並重試一次。
+
 ## 搬移到其他專案
 
 將整個資料夾複製到目標專案：
@@ -217,6 +222,13 @@ cd "D:\projects\target-project\silavater-skillset-deployer"
 ```
 
 重要：project scope 會安裝到 target root。Python 部署器預設 target 是目前所在目錄，也可以用 `--target` 明確指定。
+
+也可以省略手動 update，直接從目標專案 root 啟動 TUI；需要 mirror 時它會詢問是否 bootstrap：
+
+```cmd
+cd "D:\projects\target-project"
+.\silavater-skillset-deployer\scripts\SkillDeployer-TUI.cmd
+```
 
 ## 目標專案的建議安裝方式
 

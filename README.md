@@ -102,20 +102,23 @@ Recommended pattern: keep this package inside the target project, but run the de
 
 Before deploying, confirm the environment requirements above are available.
 
-Fresh clones do not include `vendor/skill-sources/`. Bootstrap the local mirrors once from inside the deployer folder:
+Fresh clones do not include `vendor/skill-sources/`. The TUI checks local mirrors on startup; if `vendor/` is missing, empty, or does not contain usable skill mirrors, it asks whether to run the updater before continuing.
 
-```cmd
-cd "D:\projects\target-project\silavater-skillset-deployer"
-.\scripts\Update-SkillSources.cmd
-```
-
-Then return to the target project root and deploy:
+Start from the target project root:
 
 ```cmd
 cd "D:\projects\target-project"
 
 # TUI with SkillSetDeployMode and SingleSkillDeployMode
 .\silavater-skillset-deployer\scripts\SkillDeployer-TUI.cmd
+```
+
+For direct CLI use, bootstrap the local mirrors first when working from a fresh clone:
+
+```cmd
+cd "D:\projects\target-project\silavater-skillset-deployer"
+.\scripts\Update-SkillSources.cmd
+cd "D:\projects\target-project"
 
 # Preview only; no changes
 .\silavater-skillset-deployer\scripts\Deploy-SkillSet-Py.cmd --set env-setup --dry-run
@@ -199,6 +202,8 @@ It refuses to update a mirror with local changes, the wrong origin URL, a detach
 
 If deploy fails with missing local skill sources, run this updater first. The `vendor/` directory is intentionally not tracked in this repository.
 
+The TUI runs the same mirror checks automatically. On startup it offers to update missing or incomplete local mirrors, and if a deploy command fails later it offers to run the updater and retry once.
+
 ## Move into another project
 
 Copy this whole folder into the target project:
@@ -217,6 +222,13 @@ cd "D:\projects\target-project\silavater-skillset-deployer"
 ```
 
 Important: project scope installs into the target root. The Python deployer defaults that target to the current directory, but `--target` lets you make the destination explicit.
+
+You can also skip the manual update step and launch the TUI from the target root; it will prompt to bootstrap mirrors if needed:
+
+```cmd
+cd "D:\projects\target-project"
+.\silavater-skillset-deployer\scripts\SkillDeployer-TUI.cmd
+```
 
 ## Recommended install pattern for target projects
 

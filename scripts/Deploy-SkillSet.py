@@ -154,15 +154,19 @@ def is_relative_to(path: Path, parent: Path) -> bool:
 
 
 def require_source_root(source_root: Path) -> None:
-    missing: list[Path] = []
+    problems: list[str] = []
     for repo in REPOS.values():
         path = repo_path(source_root, repo)
         if not path.exists():
-            missing.append(path)
+            problems.append(f"{path} is missing")
+        elif not path.is_dir():
+            problems.append(f"{path} is not a directory")
+        elif not any(path.rglob("SKILL.md")):
+            problems.append(f"{path} does not contain any SKILL.md files")
 
-    if missing:
+    if problems:
         lines = ["Missing local skill sources:"]
-        lines.extend(f"  - {path}" for path in missing)
+        lines.extend(f"  - {problem}" for problem in problems)
         lines.extend(
             (
                 "",

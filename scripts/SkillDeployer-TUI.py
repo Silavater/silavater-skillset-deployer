@@ -141,41 +141,73 @@ def check_python() -> str:
     return "missing"
 
 
+def source_problem_labels() -> list[str]:
+    problems: list[str] = []
+    vendor_root = DEPLOYER_ROOT / "vendor"
+    source_root = DEPLOYER.DEFAULT_SOURCE_ROOT
+
+    if not vendor_root.exists():
+        problems.append(f"vendor folder is missing: {vendor_root}")
+    elif not vendor_root.is_dir():
+        problems.append(f"vendor path is not a directory: {vendor_root}")
+
+    if not source_root.exists():
+        problems.append(f"skill-sources folder is missing: {source_root}")
+        return problems
+    if not source_root.is_dir():
+        problems.append(f"skill-sources path is not a directory: {source_root}")
+        return problems
+
+    for repo in DEPLOYER.REPOS.values():
+        path = DEPLOYER.repo_path(source_root, repo)
+        if not path.exists():
+            problems.append(f"{repo.label} mirror is missing: {path}")
+        elif not path.is_dir():
+            problems.append(f"{repo.label} mirror path is not a directory: {path}")
+        elif not any(path.rglob("SKILL.md")):
+            problems.append(f"{repo.label} mirror contains no SKILL.md files: {path}")
+
+    return problems
+
+
 def show_environment_status() -> None:
     print_header("Environment")
+    source_problems = source_problem_labels()
     checks = (
         ("Python", check_python()),
         ("Node.js", check_command("node")),
         ("npm", check_command("npm")),
         ("npx", check_command("npx")),
         ("Git", check_command("git")),
-        ("Matt mirror", "ok" if (DEPLOYER.DEFAULT_SOURCE_ROOT / "mattpocock-skills").exists() else "missing"),
-        ("ECC mirror", "ok" if (DEPLOYER.DEFAULT_SOURCE_ROOT / "affaan-m-ecc").exists() else "missing"),
+        ("Mirrors", "ok" if not source_problems else "needs update"),
     )
     for name, status in checks:
         print(f"{name:12} {status}")
+    if source_problems:
+        print("\nMirror issues:")
+        for problem in source_problems:
+            print(f"- {problem}")
     pause()
 
 
-def missing_source_labels() -> list[str]:
-    missing: list[str] = []
-    for repo in DEPLOYER.REPOS.values():
-        path = DEPLOYER.repo_path(DEPLOYER.DEFAULT_SOURCE_ROOT, repo)
-        if not path.exists():
-            missing.append(f"{repo.label} ({path})")
-    return missing
+def run_update_sources() -> None:
+    print("\nRunning source update:")
+    print(f"{sys.executable} {UPDATE_SCRIPT}")
+    result = subprocess.run([sys.executable, str(UPDATE_SCRIPT)])
+    if result.returncode != 0:
+        raise TuiError(f"Source update failed with exit code {result.returncode}")
 
 
 def ensure_local_sources() -> None:
-    missing = missing_source_labels()
-    if not missing:
+    problems = source_problem_labels()
+    if not problems:
         return
 
-    print_header("Local Mirrors Missing")
+    print_header("Local Mirrors Need Update")
     print("Fresh clones do not include vendor mirrors.")
     print("The deployer needs local skill sources before it can install skills.\n")
-    for item in missing:
-        print(f"- {item}")
+    for problem in problems:
+        print(f"- {problem}")
 
     print("\nThis will run:")
     print(f"{sys.executable} {UPDATE_SCRIPT}")
@@ -184,9 +216,11 @@ def ensure_local_sources() -> None:
             "Local mirrors are missing. Run scripts\\Update-SkillSources.cmd from the deployer folder, then rerun the TUI."
         )
 
-    result = subprocess.run([sys.executable, str(UPDATE_SCRIPT)])
-    if result.returncode != 0:
-        raise TuiError(f"Source update failed with exit code {result.returncode}")
+    run_update_sources()
+
+    remaining = source_problem_labels()
+    if remaining:
+        raise TuiError("Local mirrors are still incomplete after update:\n" + "\n".join(f"- {item}" for item in remaining))
 
 
 def is_inside_deployer(path: Path) -> bool:
@@ -268,8 +302,17 @@ def print_review(command: Sequence[str], summary: Sequence[tuple[str, str]]) -> 
 
 def run_command(command: Sequence[str]) -> None:
     result = subprocess.run(list(command))
-    if result.returncode != 0:
+    if result.returncode == 0:
+        return
+
+    print(f"\nDeploy command failed with exit code {result.returncode}.")
+    if not ask_yes_no("Run source update and retry once", default=True):
         raise TuiError(f"Deploy command failed with exit code {result.returncode}")
+
+    run_update_sources()
+    retry = subprocess.run(list(command))
+    if retry.returncode != 0:
+        raise TuiError(f"Deploy command still failed after update with exit code {retry.returncode}")
 
 
 def skill_set_deploy_mode() -> None:
@@ -370,6 +413,7 @@ def single_skill_deploy_mode() -> None:
 
 def main() -> int:
     try:
+        ensure_local_sources()
         while True:
             print_header("Main Menu")
             mode = ask_choice(
